@@ -1,0 +1,11 @@
+# Credenciales de sesión: NUNCA versionar
+.env
+
+# Respuesta cruda de la plataforma: contiene tokens de descarga por sesión
+challenges/*/metadata.json
+
+# Ruido de análisis
+__pycache__/
+*.pyc
+challenges/*/extract/
+challenges/*/out/
