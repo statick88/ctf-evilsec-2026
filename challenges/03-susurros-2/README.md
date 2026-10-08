@@ -1,5 +1,7 @@
 # 3. Susurros 2
 
+> **Status: unsolved** — fragments recovered, final decode still ambiguous.
+
 **Category**: Forensic  
 **Difficulty**: HARD  
 **Points**: 500
@@ -12,10 +14,10 @@
 
 ## Reconnaissance
 
-- **File**: `server.log` (7.6 MB, 120,000 lines)
+- **File**: `server.log` (7.6 MB, ~120,000 lines)
 - **Log format**: `[YYYY-MM-DD HH:MM:SS] LEVEL message key=value key=value...`
 - **Normal lines**: High-volume structured logs with fields like `host=`, `user=`, `pct=`, `backlog=`, `consumer=`, `files=`, `elapsed=`, `heap=`, `pause=`, `rows=`, `retries=`, `shard=`, `action=`, `from=`, `service=`, `job=`, `tty=`
-- **Message types**: `WARN High memory usage`, `WARN cert expires`, `ERROR Connection lost`, `ERROR queue backlog`, `DEBUG gc pause`, `INFO cron ran`, `INFO backup finished`, `ERROR Failed login`, `DEBUG System check`, `WARN Disk space low`, `INFO Service restarted`, `INFO User logged in`, `ERROR Connection lost`, `WARN High memory usage`, `WARN cert expires`, `DEBUG gc pause`, `INFO cron ran`, `INFO backup finished`, `ERROR Failed login`, `DEBUG System check`, `WARN Disk space low`
+- **Message types**: `WARN High memory usage`, `WARN cert expires`, `ERROR Connection lost`, `ERROR queue backlog`, `DEBUG gc pause`, `INFO cron ran`, `INFO backup finished`, `ERROR Failed login`, `DEBUG System check`, `WARN Disk space low`, `INFO Service restarted`, `INFO User logged in`
 - **Anomalies (unique lines appearing 1-2 times each)**:
   - `INFO audit user=svc_backup ascii_dec=69.86.73.76` → "EVIL"
   - `DEBUG heartbeat crc32=ezNsXw== shard=9 ok` → base64 CRC32
@@ -27,7 +29,7 @@
 
 ## Analysis
 
-**Decoy identification**: Lines explicitly labeled `FAKE`, `mirror`, `payload_b64`, `rot13`, `token_hex` decode to `EVIL{d3c0y!}`, `EVIL{n0_s0y}`, `EVIL{f4ls0_}`, `ro_4` — clearly marked as false/decoy.
+**Decoy identification**: Lines explicitly labeled `FAKE`, `mirror`, `payload_b64`, `rot13`, `token_hex` decode to strings matching the decoy pattern (e.g., `d3c0y!`, `n0_s0y`, `f4ls0_`, `ro_4`) — clearly marked as false/decoy.
 
 **Real fragments** (6 unique lines, appear once each, in timestamp order):
 
@@ -44,22 +46,46 @@
 
 **Extraction rule**: Stream the log once, match the 6 unique anomaly patterns in timestamp order (file order), decode each using its indicated method (base64, hex, ASCII decimal, ROT13, leetspeak 3=e/0=o/4=a/1=i), concatenate.
 
-The fragments form the Spanish phrase "el susurro oscuro" (the dark whisper) with a `b39` suffix: `el_susurro_oscub39` → `EVIL{el_susurro_oscub39}`. Thematic fit for "Susurros 2".
+**Reconstruction result**: Fragments 1–5 concatenate to `EVIL{el_susurro_oscu`. Fragment 6 yields `b39}`, giving the candidate `el_susurro_oscub39` (wrapped in standard flag format). The platform returns **incorrect** for this candidate.
+
+**Why fragment 6 is problematic**: The expected Spanish completion for "el susurro oscuro" would be `ro}` (yielding `el_susurro_oscuro`). Instead, fragment 6 (`98.51.57.125` → ASCII `b39}`) provides `b39}`, which:
+- Does not match the linguistic completion (`ro}` vs `b39}`)
+- Introduces `b39` with no clear semantic meaning
+- Uses the same ASCII-decimal encoding as fragment 1, but the result is not a dictionary word
+
+**Candidate completions tested** (all rejected by platform):
+- `el_susurro_oscub39` (raw concatenation)
+- `el_susurro_oscuro` (linguistic correction: replace `b39` → `ro`)
+- `el_susurro_oscuro_b39` (hybrid)
+- `el_susurro_oscuro39` (append numeric suffix)
+
+**Next step**: Re-examine fragment 6's encoding. The value `98.51.57.125` decodes to ASCII `b39}` (`98='b', 51='3', 57='9', 125='}'`). Possibilities:
+- The IP-like format may indicate a different decode (e.g., each octet as a separate operation)
+- Fragment 6 could be a red herring / anti-automation trap
+- The log may contain a 7th real fragment not yet identified (frequency >2 but pattern distinct)
+- Leetspeak on `b39` (`b`=6? `3`=e? `9`=g?) yields no Spanish word
+
+## Rejected candidate
+
+The candidate `el_susurro_oscub39` (wrapped in standard flag format) was submitted and rejected.
+
+**Platform verdict**: `incorrect` (returned by `/api/v1/challenges/3/submit`).  
+Do not submit this candidate — it is not the accepted answer.
+
+## Flag
+
+No confirmed flag. The reconstruction yields a candidate that the platform rejects. Fragment 6 remains ambiguous.
 
 ## Reconstruction
 
 ```bash
 $ ./solve.py
-EVIL{el_susurro_oscub39}
+Candidate flag (NOT confirmed by platform): [candidate printed here]
+Note: Fragment 6 yields 'b39}' but linguistic completion expects 'ro}'.
+Platform verdict for this candidate: INCORRECT
 ```
 
-The solve script streams the 7.6 MB log line-by-line (no full load), uses compiled regexes for the 6 anomaly patterns, applies the appropriate decoder, and assembles the flag.
-
-## Flag
-
-```
-EVIL{el_susurro_oscub39}
-```
+The solve script streams the 7.6 MB log line-by-line (no full load), uses compiled regexes for the 6 anomaly patterns, applies the appropriate decoder, and assembles the candidate flag. **The output is a candidate, not a confirmed flag.**
 
 ## Key Takeaways
 
@@ -68,4 +94,7 @@ EVIL{el_susurro_oscub39}
 - Decoys often self-identify (`FAKE`, `mirror`, `decoy`, `false`) and reveal the encoding schemes used for real fragments
 - Multiple encoding layers (base64, hex, ASCII decimal, ROT13, leetspeak) can chain; decoys teach the decoder ring
 - Timestamp order (file order) is the reliable sequence when fragments appear once each
-- Thematic consistency ("susurros" → "el susurro oscuro") validates the reconstruction
+- Thematic consistency ("susurros" → "el susurro oscuro") validates fragments 1–5, but fragment 6 breaks the pattern
+- **Always verify candidate flags against the platform before documenting as solved**
+
+(End of file - total 100 lines)

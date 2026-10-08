@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # solve.py — Susurros 2 (HARD)
 # Streaming extraction of unique anomaly lines from server.log, decoding fragments,
-# and reconstructing the flag in timestamp order.
+# and reconstructing the candidate flag in timestamp order.
 #
 # Fragments found (in timestamp order):
 # 1. INFO audit ascii_dec=69.86.73.76 -> "EVIL"
@@ -11,7 +11,9 @@
 # 5. INFO etl_job stage=40 blob=30736375 (hex) -> "0scu" -> leetspeak 0=o -> "oscu"
 # 6. INFO etl_job stage=47 blob=98.51.57.125 (ASCII decimal IP) -> "b39}"
 #
-# Flag: EVIL{el_susurro_oscub39}  (reads as "el susurro oscuro b39")
+# Candidate flag: EVIL{el_susurro_oscub39}  (reads as "el susurro oscuro b39")
+# Platform verdict: INCORRECT — fragment 6 (b39}) contradicts linguistic completion (ro}).
+# This script prints the candidate for analysis. The flag is NOT confirmed by the platform.
 
 import sys
 import base64
@@ -77,9 +79,11 @@ def main():
                     except Exception as e:
                         print(f"Decode error for {desc}: {e}", file=sys.stderr)
     
-    # Assemble flag
-    flag = ''.join(fragments)
-    print(flag)
+    # Assemble candidate flag
+    candidate = ''.join(fragments)
+    print(f"Candidate flag (NOT confirmed by platform): {candidate}")
+    print("Note: Fragment 6 yields 'b39}' but linguistic completion expects 'ro}'.")
+    print("Platform verdict for this candidate: INCORRECT")
 
 if __name__ == "__main__":
     main()

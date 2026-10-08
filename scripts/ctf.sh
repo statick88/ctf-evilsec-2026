@@ -34,7 +34,26 @@ CTF_SESSION="${CTF_SESSION:-${session:-}}"
 # .env apunta a .../challenges; la API vive en el origen.
 CTF_URL="$(python3 -c 'import sys,urllib.parse as u; print(u.urlsplit(sys.argv[1]).scheme+"://"+u.urlsplit(sys.argv[1]).netloc)' "$CTF_URL")"
 
-_ctf() { curl -sS -b "session=${CTF_SESSION}" "$@"; }
+# El SPA de CTFd manda `CSRF-Token` en TODAS las peticiones, tomado del estado
+# inicial que se sirve embebido en el HTML. Sin ese header, Flask-WTF responde
+# 403 con el mensaje "You don't have the permission to access the requested
+# resource", que parece un problema de permisos pero en realidad es CSRF.
+ctf-csrf() {
+  curl -sS -b "session=${CTF_SESSION}" "${CTF_URL}/challenges" \
+    | grep -oE "csrfNonce': \"[a-f0-9]+\"" | head -1 \
+    | grep -oE '[a-f0-9]{32,}'
+}
+CTF_CSRF="$(ctf-csrf)"
+export CTF_CSRF
+
+_ctf() {
+  if [[ -n "${CTF_CSRF:-}" ]]; then
+    curl -sS -b "session=${CTF_SESSION}" -H "CSRF-Token: ${CTF_CSRF}" \
+         -H "Accept: application/json" "$@"
+  else
+    curl -sS -b "session=${CTF_SESSION}" -H "Accept: application/json" "$@"
+  fi
+}
 
 ctf-list()   { _ctf "${CTF_URL}/api/v1/challenges" | python3 "$CTF_LIB/list.py"; }
 ctf-info()   { _ctf "${CTF_URL}/api/v1/challenges/${1:?uso: ctf-info <id>}" \

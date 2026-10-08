@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # solve.py — Challenge 16: La foto del café
-# OSINT / Geolocation — AI-generated image analysis
+# OSINT / Geolocation — AI-generated image metadata extraction
 #
 # This script extracts metadata from the challenge image and prints the
-# inferred answer. The final geolocation step is analyst-driven (visual
-# inference + contextual correlation), not mechanically derivable from
-# metadata alone, since the image is AI-generated (Grok Imagine) with
-# no GPS EXIF data.
+# evidence. The image is AI-generated (Grok Imagine) with no GPS EXIF data.
+# No geolocation can be derived from the artifact. The earlier candidate
+# EVIL{santa_fe} was a thematic hypothesis; the platform rejected it.
 #
 # Usage: python3 solve.py
 
@@ -44,27 +43,29 @@ def main():
     print("""
 Image: AI-generated (Grok Imagine / SpaceXAI)
 - C2PA metadata present: trainedAlgorithmicMedia
+- Software Agent: Grok Imagine
+- Author: SpaceXAI (Organization)
 - No GPS coordinates, no camera model, no real timestamps
 - Artist field: UUID (ffe2273b-e7e6-4919-a6dd-cd3ff448007a)
 - Signature in ImageDescription/UserComment (base64 crypto blob)
+- Image dimensions: 784x1168 (portrait)
 
-GEOLOCATION INFERENCE (analyst-driven):
-- Challenge context: "cerca de donde trabaja el objetivo" (near target's workplace)
-- CTF theme: Argentine (EvilSec CTF, Spanish, "costanera", "capybara")
-- Challenge #17 confirmed: Santa Fe (Puente Colgante on costanera)
-- Thematic consistency → same province/city context
-- Workplace district in Santa Fe: provincial government area, microcentro
+GEOLOCATION ASSESSMENT:
+- The image is synthetic; visual analysis cannot identify a real location
+- No EXIF GPS, no XMP GPS, no C2PA location assertions
+- Challenge narrative ("cerca de donde trabaja el objetivo") is a story element
+- CTF thematic context (Argentina, Santa Fe in #17) is not evidence
 
-CONFIRMED ANSWER: Santa Fe (Santa Fe de la Vera Cruz)
-FLAG: EVIL{santa_fe}
+EARLIER CANDIDATE (REJECTED):
+- EVIL{santa_fe} — based on thematic correlation with challenge #17
+- Platform verdict: INCORRECT
 
-SOURCES:
-- C2PA metadata identifies Grok Imagine (xAI/SpaceXAI)
-- Challenge #17 writeup: Puente Colgante = Santa Fe costanera
-- EvilSec CTF geographic theme: Argentina, Santa Fe province
+CONCLUSION:
+No confirmed answer. The artifact contains no geolocation data.
+Flag remains unknown.
 """)
     
-    print("\n[+] Flag: EVIL{santa_fe}")
+    print("\n[+] Status: No confirmed flag — platform rejected thematic candidate.")
     return 0
 
 if __name__ == "__main__":

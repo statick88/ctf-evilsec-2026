@@ -71,6 +71,7 @@ All returned the normal page without flag leakage.
 - `User-Agent: AGENT-CAPYBARA-MARO`
 - `X-Agent: CAPYBARA-MARO`
 - `X-Capybara: MARO`
+- `Referer: http://192.99.247.166:8085/preferencias.php`
 
 ### 5. Known gadget chains
 - Monolog\Logger
@@ -81,6 +82,10 @@ All returned the normal page without flag leakage.
 - `php://filter` to read `index.php` and `Preferencias.php`
 - Backup file enumeration (404)
 - `.git`, `.bak`, `~` files (404)
+
+### 7. Cookie persistence
+- Set malicious cookie, then make subsequent request
+- Cookie is reset to default after each request
 
 ## Hypothesis
 

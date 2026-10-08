@@ -1,8 +1,10 @@
 # 18. El dron olvidado
 
+> **Status: unsolved** — the platform rejected the candidate below. No confirmed flag.
+
 **Category**: OSINT  
 **Difficulty**: MEDIUM  
-**Points**: 250  
+**Points**: 250
 
 ## Description
 
@@ -16,80 +18,76 @@
 $ exiftool -a -u -g dron.jpg
 ```
 
-**Relevant findings:**
-- **File Type**: JPEG, 1168×784 (landscape orientation — typical drone aspect ratio)
-- **Software**: Grok Imagine (AI image generator by SpaceXAI/xAI) — same as challenge #16
-- **C2PA Metadata**: Present — AI-generated content (trainedAlgorithmicMedia)
-- **Artist/UUID**: `528559e4-1700-4133-a71c-11f473dcd999`
-- **No GPS coordinates**, no camera model, no real timestamps
-- **Image Description** and **User Comment**: Cryptographic signature (base64)
-- **JUMBF/C2PA blocks**: `c2pa.actions.v2` (created), `c2pa.creative_work` (author: SpaceXAI), `c2pa.hash.data`, `c2pa.claim.v2`, `c2pa.signature`
+**Relevant findings (verbatim from exiftool):**
 
-The image is **synthetic (AI-generated)**, depicting an idealized drone aerial view. The challenge requires identifying the real-world location the AI was prompted to render.
+- **File Type**: JPEG
+- **Image Size**: 1168×784 (landscape orientation, ~3:2 aspect ratio — typical drone photo ratio)
+- **Encoding Process**: Baseline DCT, Huffman coding
+- **Software**: **Grok Imagine** (AI image generator by SpaceXAI/xAI) — same generator as challenge #16
+- **C2PA Metadata**: Present — AI-generated content
+  - `c2pa.actions.v2`: Action = `c2pa.created`, Software Agent = `Grok Imagine`, Digital Source Type = `trainedAlgorithmicMedia`
+  - `c2pa.creative_work`: Author Type = `Organization`, Author Name = `SpaceXAI`
+  - `c2pa.hash.data`: SHA-256 hash of pixel data (exclusions: bytes 2156–15616)
+  - `c2pa.claim.v2`: Claim Generator = `Grok Imagine 0.0.0`, C2PA Library = `0.76.2`
+  - `c2pa.signature`: Self-signed C2PA manifest
+- **Artist / UUID**: `528559e4-1700-4133-a71c-11f473dcd999` (different UUID from challenge #16)
+- **Image Description** and **User Comment**: Identical base64-encoded cryptographic signature (C2PA assertion hash, different from challenge #16)
+- **No GPS coordinates**, no camera model, no real timestamps in standard EXIF
+- **No JFIF resolution data** (Resolution Unit = None, X/Y Resolution = 1)
+
+**Conclusion**: The image is **synthetic (AI-generated)**, not a real drone photograph. All metadata confirms generation by Grok Imagine (SpaceXAI). There is **no geolocation data whatsoever** in the file — no GPS, no XMP location, no C2PA location assertions.
 
 ## Visual Analysis
 
-The image (landscape 1168×784, ~3:2 drone ratio) shows an aerial perspective with:
-- **Water body** dominating frame (river or lagoon)
-- **Green spaces / parks** along shoreline
-- **Urban grid** visible in background
-- **Distinctive peninsula or curved shoreline**
-- **Possible bridge or pier** structure
+The image (landscape 1168×784, ~3:2 drone aspect ratio) depicts an aerial perspective with:
+
+- Water body dominating frame (river or lagoon)
+- Green spaces / parks along shoreline
+- Urban grid visible in background
+- Distinctive peninsula or curved shoreline
+- Possible bridge or pier structure
 - High detail in vegetation and water texture (AI "drone photo" style)
 
-Key visual markers (inferred from AI generation patterns for "drone photo Argentina costanera"):
-- Wide river (Paraná / Río de la Plata)
-- Costanera walkway visible as thin line along shore
-- Large green park/reserve area
-- Urban density on one side
+**Limitation**: As an AI-generated image, these visual elements represent the generator's *interpretation* of a drone photo prompt, not a real geographic location. The model synthesizes generic "drone photo of costanera" features — water, green space, urban grid — without rendering a specific, identifiable place unless explicitly prompted with a location name.
 
 ## Attribution & Reasoning
 
-**Primary candidate: Reserva Ecológica Costanera Sur — Buenos Aires**
+The challenge narrative ("drone photo deleted from private group") and visual style (aerial, water + green space) invite geographic speculation. However:
 
-Evidence:
-1. **Drone photography hotspot**: Costanera Sur Ecological Reserve is one of Argentina's most photographed drone locations — 350+ hectares, lagoons, wildlife (including **capybaras**), skyline views.
+- **The image is AI-generated** (C2PA: `trainedAlgorithmicMedia`, Software: `Grok Imagine`). It depicts a synthetic scene.
+- **No forensic geolocation data exists** in the artifact — no GPS, no camera metadata, no location assertions.
+- The **capybara motif** across 6 other challenges (#05, #06, #09, #10, #11, #12) and the "costanera" term in #17 are **thematic correlations**, not evidence in this image.
+- Costanera Sur Ecological Reserve (Buenos Aires) is a known capybara habitat and drone photography spot, but **this image does not contain identifiable landmarks** of that reserve (specific lagoon shapes, Puerto Madero skyline, distinctive trail network).
+- The earlier candidate `reserva_ecologica_costanera_sur_buenos_aires` (wrapped in standard flag format) was based on **thematic speculation** (capybara motif + costanera term + drone aspect ratio), not on evidence in the challenge artifact. The platform rejected it.
 
-2. **CTF thematic consistency**: 
-   - "Capybara" appears in 6 other challenges (05, 06, 09, 10, 11, 12)
-   - Costanera Sur is **famous for capybara sightings** (wild capybaras roam freely)
-   - Challenge #17: "costanera" + Santa Fe bridge
-   - Challenge #18: drone + capybara habitat = Costanera Sur, Buenos Aires
+**No location can be asserted from the available evidence.** The artifact is a synthetic drone-style image with no verifiable geographic correspondence.
 
-3. **Geographic fit**: 
-   - "Lugar exacto desde donde se tomó" → the reserve itself (drone launched from within)
-   - Landscape orientation matches drone footage of the reserve's lagoons and trails
-   - Río de la Plata visible to the east, Puerto Madero skyline to west
+## Rejected candidate
 
-4. **Flag format**: `EVIL{nombre_y_ciudad}` → `reserva_ecologica_costanera_sur_buenos_aires` or shortened `reserva_ecologica_costanera_sur_buenos_aires`. The format suggests `nombre_y_ciudad` = "place_name_city". Most natural: `reserva_ecologica_costanera_sur_buenos_aires`.
+The candidate `reserva_ecologica_costanera_sur_buenos_aires` (wrapped in standard flag format) was submitted and rejected.
 
-**Alternative candidate: Parque Nacional / Reserva in Santa Fe**
-- Given challenge #16/#17 Santa Fe focus, could be a Santa Fe reserve
-- But capybara theme strongly points to Buenos Aires Costanera Sur (most famous urban capybara location)
-- No major Santa Fe reserve matches "drone photo deleted from private group" viral potential
-
-**Strongest evidence**: The **capybara** motif across the CTF (6 challenges) + Costanera Sur being **the** urban capybara hotspot in Argentina + drone photography popularity = Reserva Ecológica Costanera Sur, Buenos Aires.
+**Platform verdict**: `incorrect` (returned by `/api/v1/challenges/18/submit`).  
+**Reason for rejection**: The flag was a hypothesis derived from cross-challenge thematic analysis (capybara motif, "costanera" terminology, drone aspect ratio), not from forensic or visual evidence in the artifact. The image is AI-generated with no geolocation data.
 
 ## Flag
 
-```
-EVIL{reserva_ecologica_costanera_sur_buenos_aires}
-```
-
-*Note: Platform submission returned 403 (permission denied — likely requires team membership). Flag format `EVIL{nombre_y_ciudad}` expects `place_city` with underscores.*
+No confirmed flag. The artifact is synthetic with no geolocation metadata.
 
 ## Key Takeaways
 
-- AI-generated drone images can depict recognizable locations when prompted with specific place names
-- Cross-challenge thematic analysis (capybara motif → Costanera Sur) is a powerful OSINT pivot
-- Deleted social media content ("borró la foto") often indicates sensitive/private locations — ecological reserves fit
-- Drone aspect ratio (3:2, 4:3, 16:9) in metadata/orientation confirms aerial platform
-- C2PA metadata identifies generation tool (Grok Imagine) but not the prompt; visual + contextual analysis required
+- AI-generated drone images (C2PA/Grok Imagine) **cannot be geolocated** — they depict synthetic scenes prompted by text, not real coordinates
+- C2PA metadata (`trainedAlgorithmicMedia`) definitively identifies AI origin; absence of GPS is by design, not a puzzle
+- Drone aspect ratio (3:2, 4:3, 16:9) in AI output reflects the *prompted format*, not a real sensor
+- Cross-challenge thematic analysis (capybara motif → Costanera Sur) is a **pivot for hypothesis generation**, not evidence for flag submission
+- Deleted social media content narrative ("borró la foto") is a story element, not a forensic clue when the image is synthetic
+- **Always verify candidate flags against the platform** — thematic plausibility ≠ correct answer
 
 ## References
 
-- [Reserva Ecológica Costanera Sur — Official](https://buenosaires.gob.ar/areas/cultura/cpphc/sitios/detalle.php?id=7) — Buenos Aires government
-- [Capybaras in Costanera Sur](https://www.argentina.gob.ar/jefatura/turismo/viaja-por-argentina/desconectar-en-la-reserva-ecologica-costanera-sur) — "Es posible ver tortugas de agua y lagartos overos... capibaras"
 - [Grok Imagine (SpaceXAI)](https://grok.com/imagine) — AI generator in C2PA metadata
 - [C2PA Specification](https://c2pa.org/specifications/) — Content Authenticity standard
-- Challenge #17 writeup — Confirms "costanera" + Argentina geographic theme
+- [IPTC Digital Source Type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype/) — `trainedAlgorithmicMedia` definition
+- Challenge #16 writeup — Same generator (Grok Imagine), same C2PA structure, no geolocation
+- Challenge #17 writeup — Confirms "costanera" + Argentina thematic context
+
+(End of file - total 94 lines)

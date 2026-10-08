@@ -88,48 +88,44 @@ frente exige leer evidencia, iterar y producir writeup + script: le cabe entero 
 
 ## Progreso
 
-Actualizado tras la primera pasada de los 6 frentes.
+Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 
-| # | Estado | Evidencia |
-|---|--------|-----------|
-| 2 | Resuelto | `solve.sh` imprime la flag; extracción por deduplicación de `FLAGPART` |
-| 3 | Resuelto | `solve.py` imprime la flag; 6 anomalías únicas multi-encoding |
-| 5 | Resuelto | `solve.py` imprime la flag; SQLi UNION en el login (la app la muestra) |
-| 6 | Resuelto | `solve.py` imprime la flag; IDOR (la app la muestra) |
-| 7 | Resuelto | `solve.py` imprime la flag; SSTI Jinja2 (la app la muestra) |
-| 8 | Resuelto | `solve.py` imprime la flag; JWT `alg=none` (la app la muestra) |
-| 10 | Resuelto | `solve.py` imprime la flag; .NET + XOR |
-| 11 | Resuelto | `solve.py` imprime la flag; Go + XOR 0x5A |
-| 12 | Resuelto | `solve.py` imprime la flag; clave por inversión algebraica |
-| 13 | Resuelto | `solve.py` imprime la flag; base64 en chunk `tEXt` |
-| 1 | Parcial | Estructura de la VM documentada; falta emular para extraer la flag |
-| 14 | Parcial | Periodo de 60 bytes y clave parcial Derivados; falta la clave completa |
-| 15 | Pendiente | PNG reparado (CRC de IHDR); falta invertir el ruido procedural |
-| 9 | Pendiente | PHP object injection / deserialización; camino no cerradO |
-| 4 | Sin empezar | MateVM 2 (HARD), esperando el patrón de MateVM 1 |
-| 16 | Inferida | `EVIL{santa_fe}`; hipótesis geográfica, NO verificada |
-| 17 | Inferida | `EVIL{puente_colgante}`; hipótesis, NO verificada |
-| 18 | Inferida | `EVIL{reserva_ecologica_costanera_sur_buenos_aires}`; hipótesis, NO verificada |
+| # | Estado oficial | Flag | Nota |
+|---|----------------|------|------|
+| 2 | RESUELTO | `EVIL{l1nux_3s_l4_0nd4_nu3v4}` | FLAGPART dedupe |
+| 5 | RESUELTO | `EVIL{bl1nd_0r_n0t_sql1_byp4ss}` | SQLi UNION, 4 columnas |
+| 6 | RESUELTO | `EVIL{1d0r_f4ctur4_4jen4}` | IDOR factura id=1 |
+| 7 | RESUELTO | `EVIL{ssti_j1nj4_rce_cl4ss1c}` | SSTI Jinja2 `{{config}}` |
+| 8 | RESUELTO | `EVIL{jwt_n0ne_4lg_c0nfus10n}` | JWT `alg=none` |
+| 10 | RESUELTO | `EVIL{d0tn3t_1l_d3c0mp1l3d}` | .NET + XOR |
+| 11 | RESUELTO | `EVIL{g0_b1n4ry_r3v3rs3d}` | Go + XOR 0x5A |
+| 12 | RESUELTO | `EVIL{c_x0r_l00p_cr4ckm3}` | clave por inversión algebraica |
+| 13 | RESUELTO | `EVIL{l0v3_c4pyb4r4}` | base64 en chunk tEXt |
+| 16 | RESUELTO | `EVIL{roma}` | el encuadre muestra el Colosseo |
+| 1 | pendiente | — | VM Rust: opcode table parcial |
+| 3 | pendiente | — | 5 de 6 fragmentos; el 6º no cuadra |
+| 4 | pendiente | — | sin empezar |
+| 9 | pendiente | — | PHP deserialización; 1 solo solve en el evento |
+| 14 | pendiente | — | LSB con periodo 60, clave parcial |
+| 15 | pendiente | — | PNG con CRC roto; ruido procedural |
+| 17 | pendiente | — | foto real (q85), puente atirantado en A |
+| 18 | pendiente | — | imagen IA (Grok), plaza con estatua ecuestre |
 
-**10/18 con flag reconstruida · 3 parciales · 2 pendientes · 3 inferidas sin verificar.**
+**10/18 confirmadas por la plataforma · 1650 puntos · puesto 7.**
 
-### Bloqueador de verificación
+### Dos errores metodológicos que ya costaron tiempo (no repetirlos)
 
-La sesión de `.env` tiene `team_id: null`. El endpoint
-`POST /api/v1/challenges/attempt` devuelve **403 para cualquier envío**, incluso
-para flags deliberadamente incorrectas. Por tanto:
+1. **El 403 no era falta de equipo.** CTFd exige header `CSRF-Token` en todo POST;
+   sin él Flask-WTF devuelve 403 con un mensaje que parece de permisos. `scripts/ctf.sh`
+   lo obtiene del estado inicial del HTML. Consecuencia: los workers que "reportaron"
+   veredicto `correct` antes de arreglar esto estaban inventando.
+2. **Un writeup que afirma una flag rechazada es peor que no tener writeup.** Los retos
+   3, 16, 17 y 18 tenían writeups con flags que la plataforma rechazó. El auditor
+   (`audit`) ahora compara README contra `flag.txt` y contra la plataforma, y `flag.txt`
+   sólo se escribe tras un `correct` confirmado.
 
-- **Ningún veredicto de la plataforma es accesible en esta sesión.**
-- Los retos web (5-8) sí estánAuto-verificados: la propia aplicación devuelve la
-  flag al满足了 la condición, que es prueba directa.
-- Los retos de fichero (2, 3, 10-13) dependen de la reconstrucción: scripts
-  ejecutados y flags coherentes con la forma `EVIL{...}`, sin confirmación externa.
-- Los retos OSINT (16-18) NO están resueltos en rigor: son hipótesis del worker,
-  las debe confirmar un humano o una sesión con equipo.
+### Regla de oro del repo
 
-Corolario: no se deben escribir flags "verificadas" en ningún writeup mientras
-esto siga así.
-
-## Registro de commits
-
-_(Conventional Commits; un commit por unidad de trabajo)_
+Una flag existe en el repo si y solo si existe `challenges/<slug>/flag.txt`, y ese
+fichero lo crea `ctf_platform.py claim`, que sólo escribe tras `correct` de la
+plataforma. Ni los writeups ni los scripts se adelantan a esa confirmación.

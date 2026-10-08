@@ -31,7 +31,7 @@ EVIL
 
 ### VM Bytecode Structure
 
-The binary contains a custom bytecode VM implemented in Rust. The bytecode is stored at file offset `0x5488` (virtual address `0x485488`), spanning 392 bytes.
+The binary contains a custom bytecode VM implemented in Rust. The bytecode is stored in the `.rodata` section at file offset `0x5488` (virtual address `0x485488`), spanning 392 bytes.
 
 **Format:**
 ```
@@ -92,20 +92,41 @@ The main interpreter loop is at `0x18ebf` (function `fcn.00018ebf`). Key charact
 - Recursive entry point (calls itself at `0x18ff5`)
 - Processes instructions from a bytecode buffer
 - Uses stack-based architecture with registers `rbx`, `r12`-`r15`
-- Character classification checks for `'L'`, `'W'`, `'M'`, `'B'`, `'C'`, `'I'`
+- Character classification checks for `'L'`, `'W'`, `'M'`, `'B'`, `'C'`, `'I'`, `'X'`, `'Y'`
 - Calls `0x11b30` for output/error reporting
 - Input read via `fgets` into stack buffer
 
-### Strings Referenced
-- `"=== MateVM License Checker ==="`
-- `"Ingrese licencia: "`
-- `"Licencia inválida."`
-- `"Acceso concedido."`
-- `"EVIL"`
+### License Check Orchestration
+
+Function at `0x19ed0` (`fcn.00019ed0`) orchestrates the license validation:
+- Reads input character by character
+- Validates each character via `0x1c200` (character classification: lowercase a-z only)
+- Feeds characters to VM interpreter
+- Prints "Acceso concedido." on success, "Licencia inválida." on failure
+
+### Character Classification
+
+Function at `0x1c200` maps input characters:
+- Adds `0x9f` to input byte, compares to `0x19`
+- Valid range: lowercase `'a'`-`'z'` (0x61-0x7a)
+- Jump table at `0x24679` with 25 entries (8 bytes each) for each letter
+
+### Missing Instruction #1
+
+Logical index 1 absent from bytecode stream. Header at `0x5488` decodes to `0c 01 14 07 b7...` — byte `0x01` at offset 1 suggests opcode `0x01` for instruction 1.
+
+### Key Interpreter Addresses
+
+- `0x18ebf`: Main VM loop (recursive)
+- `0x11b30`: Print/error function
+- `0x12100`: Helper function
+- `0x19ed0`: License check orchestration
+- `0x1c200`: Character classification
+- `0x19704`: VM runner (calls interpreter)
 
 ## Exploitation / Recovery
 
-The VM validates a license key character-by-character. The valid license that produces `"Acceso concedido."` is the flag.
+The VM validates a license key character-by-character (lowercase a-z only). The valid license that produces "Acceso concedido." is the flag.
 
 **Recovery approach:**
 1. Extract bytecode (offset `0x5488`, 392 bytes)
@@ -114,20 +135,13 @@ The VM validates a license key character-by-character. The valid license that pr
 4. Model stack/register operations for each opcode
 5. Solve constraints to find input producing "Acceso concedido"
 
-**Missing instruction #1:** Logical index 1 absent from bytecode stream. Header at `0x5488` decodes to `0c 01 14 07 b7...` — byte `0x01` at offset 1 may be opcode for instruction 1.
-
-**Key interpreter addresses:**
-- `0x18ebf`: Main VM loop (recursive)
-- `0x11b30`: Print/error function
-- `0x12100`: Helper (called from VM)
-- `0x19ed0`: License check orchestration
-
 ## Flag
 
 ```
-EVIL{m4t3vm_l1c3ns3_v4l1d}
+Status: unsolved — VM emulator incomplete
 ```
-*Note: Flag hypothesized based on challenge context. Exact value requires full VM emulation.*
+
+The exact flag requires full VM emulation. The bytecode structure and interpreter locations are documented above for future completion.
 
 ## Key Takeaways
 
@@ -137,3 +151,8 @@ EVIL{m4t3vm_l1c3ns3_v4l1d}
 - Rust binaries leak rich string metadata even when stripped (`panic` messages, format strings)
 - Missing bytecode instructions may reside in header/adjacent data
 - License validation VMs often check input character-by-character via state machine
+
+## References
+
+- radare2 book: https://radare.gitbook.io/radare2/
+- Rust reversing: https://github.com/rust-reversing/rust-reversing

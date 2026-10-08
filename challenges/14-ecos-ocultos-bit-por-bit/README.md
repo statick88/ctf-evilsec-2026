@@ -1,8 +1,8 @@
 # 14. Ecos Ocultos: Bit por Bit
 
-**Category**: Forense (FORENSIC)
-**Difficulty**: MEDIUM
-**Points**: 250
+**Category**: Forense (FORENSIC)  
+**Difficulty**: MEDIUM  
+**Points**: 250  
 
 ## Description
 
@@ -25,8 +25,16 @@ $ binwalk mural.png
 
 ## Analysis
 
+### Image Structure
+
+- Dimensions: 480 × 640 pixels
+- Channels: RGB (3 channels × 8-bit)
+- Total pixels per channel: 307,200
+- LSB capacity per channel: 307,200 bits = 38,400 bytes
+
 ### LSB Extraction
-Extracting LSB from each channel (480×640 = 307,200 pixels → 38,400 bytes per channel):
+
+Extracting LSB from each channel (MSB-first bit order within each byte):
 
 | Channel | LSB 1s / Total | Percentage |
 |---------|----------------|------------|
@@ -34,67 +42,138 @@ Extracting LSB from each channel (480×640 = 307,200 pixels → 38,400 bytes per
 | G       | 156,288 / 307,200 | 50.88% |
 | B       | 151,396 / 307,200 | 49.28% |
 
-R and G channels show nearly identical LSB distributions; B differs.
+R and G channels show nearly identical LSB distributions; B differs significantly.
 
-### Periodicity Discovery
-Autocorrelation of R channel LSB stream reveals a **strong 60-byte period** (95.5% match at offset 60 over first 200 bytes). The LSB stream consists of 640 repetitions of a ~60-byte ciphertext block.
+### Per-Row Ciphertext Structure
 
-### R/G Channel Correlation
-R and G channels share the **same encryption key**:
-- First period ciphertexts differ at 38/60 positions (systematic: one has 0x00 where other has 0x7f/0xff)
-- At 22 positions they agree exactly
-- Known-plaintext attack (assuming `EVIL{` prefix) yields **identical key prefix** for both channels
+Each row = 480 pixels = 480 bits = **60 bytes per channel**.
+Total: 640 rows × 60 bytes = 38,400 bytes per channel.
 
-### Known-Plaintext Attack
-Assuming flag format `EVIL{...}` (60 bytes: `EVIL{` + 54 chars + `}`):
+**Critical discovery**: Each row encodes a **different** 60-byte ciphertext block.
+- 639 unique ciphertexts in R channel (rows 0-639, only rows 9&14 identical)
+- 639 unique ciphertexts in G channel (rows 0-639, only rows 9&14 identical)
+- The "60-byte period" reported earlier was an artifact of analyzing only the first few similar rows.
 
+### R/G Channel Relationship
+
+For rows 0-14: R and G ciphertexts share a **constant XOR relationship**:
 ```
-Ciphertext (R, first 60 bytes): 00 ff 0c 0c 00 ff ff ff 00 ff ff ff ff 00 03 fa be dc ...
-Plaintext (known):              E  V   I  L  {                           }
-Key (ct ^ pt):                  45 a9 45 40 7b                        7d
-                                E  ©  E  @  {                           }
+R_ct ^ G_ct = C (constant 60-byte pattern)
+C = 00000000000000007fffffffffffff03c0fffffffffffffffffe0000800000000000000000007fff
 ```
 
-**Key prefix**: `E©E@{` (only byte 1 is non-printable: 0xA9 = ©)
-**Key suffix**: `}` at position 59
+This implies: `G_ct = R_ct ^ C` for rows 0-14.
 
-### Key Properties
-- Key length: 60 bytes (matches period)
-- At ciphertext positions = 0x00 (26 positions in first period), **key = plaintext**
-- This gives 26 flag characters directly from key at those positions
-- Known flag positions: 0=`E`, 4=`{`, 59=`}`, plus 23 more at zero-ciphertext positions
-- R and G channels confirm identical key
+For rows 15+: R^G XOR becomes unique per row (no constant relationship).
 
 ### "No todos los colores pesan igual"
-R and G ("heavy" channels) carry the encrypted payload with identical key; B ("light" channel) is different — possibly a decoy or uses different scheme.
 
-### "Llave muy nuestra"
-Key is "very ours" — derived from challenge context. Key prefix `E©E@{` contains `E`, `@`, `{`, `}` and copyright symbol © (0xA9), suggesting a phrase related to "EvilSec", "copyright", or the flag format itself.
+- **R and G ("heavy" channels)**: Carry the main payload (640 × 60 bytes each), highly correlated
+- **B ("light" channel)**: Different distribution (49.28% ones), likely decoy or different encoding
 
-## Recovery Status
+### "Llave muy nuestra" — Key Derivation
 
-**Partial flag reconstructed** at 26 positions where ciphertext = 0x00 (key = plaintext):
+The key is "very ours" — derived from challenge context.
 
+**Hypotheses for key source:**
+1. **Image-derived**: Palette colors, dimensions (480×640), statistical properties
+2. **Text-derived**: "capybara", "bubble bath", "baño de espuma", "evilsec", "muy nuestra"
+3. **Structural**: Row indices, pixel coordinates, LSB statistics
+
+### Encryption Scheme
+
+Evidence suggests **XOR stream cipher** per row:
+- Each row: `ciphertext[row] = plaintext[row] ^ keystream[row]`
+- Keystream likely derived from master key + row index
+- R and G may use same keystream with constant offset (rows 0-14)
+
+### Known-Plaintext Attack (Row 0)
+
+Assuming flag format `EVIL{...}` (60 bytes) in row 0:
+
+**R channel (row 0) ciphertext:**
+```
+00 ff 0c 0c 00 ff ff ff 00 ff ff ff ff 00 03 fa be dc 00 00 00 00 ff ff e3 67 47 8f 00 00 00 00 00 00 00 00 00 00 71 00 00 1c ff 00 00 03 36 e3 ff ff ff ff 00 ff ff 38 ff 00 00 00
+```
+
+**Known plaintext positions (flag format):**
+| Pos | Plaintext | R_ct | Key = ct ^ pt |
+|-----|-----------|------|---------------|
+| 0   | 'E' (0x45) | 0x00 | 0x45 |
+| 1   | 'V' (0x56) | 0xff | 0xa9 |
+| 2   | 'I' (0x49) | 0x0c | 0x45 |
+| 3   | 'L' (0x4c) | 0x0c | 0x40 |
+| 4   | '{' (0x7b) | 0x00 | 0x7b |
+| 59  | '}' (0x7d) | 0x00 | 0x7d |
+
+**Key prefix (row 0):** `45 a9 45 40 7b ... 7d` → `E` `©` `E` `@` `{` ... `}`
+
+**Zero-ciphertext positions in row 0 (26 positions):**
+```
+[0, 4, 8, 13, 18, 19, 20, 21, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 43, 44, 52, 57, 58, 59]
+```
+At these positions: `key = plaintext` (since `0 ^ key = key`).
+
+### Key Recovery Challenge
+
+The 60-byte key for row 0 is partially known (6 bytes from flag format, 26 bytes from zero-ciphertext positions = 32 known bytes). Remaining 28 bytes unknown.
+
+**Key properties observed:**
+- Non-ASCII byte at position 1 (0xa9 = ©)
+- Printable ASCII at known positions: E, @, {, }
+- Key appears to be a structured phrase, not random
+
+**Candidate key phrases tested (none matched):**
+- "capybara", "evilsec", "muy nuestra", "llave muy nuestra", "bubble bath", "evilsecctf"
+
+### Row 0 Decryption Attempt
+
+With partial key, row 0 plaintext at known positions:
 ```
 EVIL{_______________________________}
  ^   ^                       ^    ^
  0   4                       58   59
 ```
 
-Full key recovery needed for remaining 34 positions. The key appears to be a 60-byte phrase with `E©E@{` prefix and `}` suffix.
+Zero-ciphertext positions reveal key bytes directly, but most are 0x00 (suggesting either key=0x00 or plaintext=0x00 at those positions — unlikely for text flag).
+
+## Exploitation / Recovery
+
+### Current Approach
+
+1. **Extract all 640 rows** from R and G channels
+2. **Identify keystream structure**: Row 0-14 share R^G constant; rows 15+ unique
+3. **Key derivation**: Test hypotheses:
+   - Key = hash(image properties + row_index)
+   - Key = phrase repeated/truncated to 60 bytes
+   - Key = derived from pixel statistics per row
+4. **Multi-row attack**: Flag may be split across rows, or same flag encrypted 640 ways
+5. **B channel analysis**: Check if B channel carries key schedule or metadata
+
+### Python Extraction Script
+
+See `solve.py` for complete extraction of all 640 rows from R, G, B channels.
 
 ## Flag
 
 ```
-Status: unverified (partial recovery)
-Partial: EVIL{_______________________________}
+Status: unsolved — key recovery incomplete
+Partial (row 0): EVIL{_______________________________}
 ```
+
+The flag is likely in row 0 (or distributed across first N rows). Full key recovery needed.
 
 ## Key Takeaways
 
-- Multi-channel LSB steganography with shared key across "heavy" channels (R,G)
-- 60-byte period detected via autocorrelation (95.5% match)
-- Known-plaintext attack on `EVIL{` prefix reveals key structure
-- Ciphertext zeros directly reveal plaintext (key = plaintext at those positions)
-- "Not all colors weigh equal" = payload in R/G only; B is different
+- **Per-row steganography**: Each image row = independent 60-byte ciphertext block
+- **Multi-channel correlation**: R/G share structure with constant XOR (rows 0-14)
+- **Not a single period**: Autocorrelation on concatenated stream finds false period
+- **Key is contextual**: "Muy nuestra" = derived from challenge/image, not random
+- **Zero-ciphertext leaks**: 26/60 positions in row 0 leak key directly
+- **B channel is distinct**: 49.28% ones vs 50.88% — confirm payload in R/G only
 
+## References
+
+- LSB steganography: https://en.wikipedia.org/wiki/Steganography#LSB
+- XOR stream cipher: https://crypto.stackexchange.com/questions/tagged/stream-cipher
+- PNG format: https://www.w3.org/TR/png/
