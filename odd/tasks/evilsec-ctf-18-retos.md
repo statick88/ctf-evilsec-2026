@@ -88,7 +88,47 @@ frente exige leer evidencia, iterar y producir writeup + script: le cabe entero 
 
 ## Progreso
 
-_(se actualiza al cerrar cada tarea)_
+Actualizado tras la primera pasada de los 6 frentes.
+
+| # | Estado | Evidencia |
+|---|--------|-----------|
+| 2 | Resuelto | `solve.sh` imprime la flag; extracción por deduplicación de `FLAGPART` |
+| 3 | Resuelto | `solve.py` imprime la flag; 6 anomalías únicas multi-encoding |
+| 5 | Resuelto | `solve.py` imprime la flag; SQLi UNION en el login (la app la muestra) |
+| 6 | Resuelto | `solve.py` imprime la flag; IDOR (la app la muestra) |
+| 7 | Resuelto | `solve.py` imprime la flag; SSTI Jinja2 (la app la muestra) |
+| 8 | Resuelto | `solve.py` imprime la flag; JWT `alg=none` (la app la muestra) |
+| 10 | Resuelto | `solve.py` imprime la flag; .NET + XOR |
+| 11 | Resuelto | `solve.py` imprime la flag; Go + XOR 0x5A |
+| 12 | Resuelto | `solve.py` imprime la flag; clave por inversión algebraica |
+| 13 | Resuelto | `solve.py` imprime la flag; base64 en chunk `tEXt` |
+| 1 | Parcial | Estructura de la VM documentada; falta emular para extraer la flag |
+| 14 | Parcial | Periodo de 60 bytes y clave parcial Derivados; falta la clave completa |
+| 15 | Pendiente | PNG reparado (CRC de IHDR); falta invertir el ruido procedural |
+| 9 | Pendiente | PHP object injection / deserialización; camino no cerradO |
+| 4 | Sin empezar | MateVM 2 (HARD), esperando el patrón de MateVM 1 |
+| 16 | Inferida | `EVIL{santa_fe}`; hipótesis geográfica, NO verificada |
+| 17 | Inferida | `EVIL{puente_colgante}`; hipótesis, NO verificada |
+| 18 | Inferida | `EVIL{reserva_ecologica_costanera_sur_buenos_aires}`; hipótesis, NO verificada |
+
+**10/18 con flag reconstruida · 3 parciales · 2 pendientes · 3 inferidas sin verificar.**
+
+### Bloqueador de verificación
+
+La sesión de `.env` tiene `team_id: null`. El endpoint
+`POST /api/v1/challenges/attempt` devuelve **403 para cualquier envío**, incluso
+para flags deliberadamente incorrectas. Por tanto:
+
+- **Ningún veredicto de la plataforma es accesible en esta sesión.**
+- Los retos web (5-8) sí estánAuto-verificados: la propia aplicación devuelve la
+  flag al满足了 la condición, que es prueba directa.
+- Los retos de fichero (2, 3, 10-13) dependen de la reconstrucción: scripts
+  ejecutados y flags coherentes con la forma `EVIL{...}`, sin confirmación externa.
+- Los retos OSINT (16-18) NO están resueltos en rigor: son hipótesis del worker,
+  las debe confirmar un humano o una sesión con equipo.
+
+Corolario: no se deben escribir flags "verificadas" en ningún writeup mientras
+esto siga así.
 
 ## Registro de commits
 
