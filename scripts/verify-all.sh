@@ -22,25 +22,37 @@ run_one() {
   printf '%s' "$out" | tr -d '\r' | grep -oE 'EVIL\{[^}]*\}' | sort -u | paste -sd' '
 }
 
-printf '%-46s %-9s %s\n' RETO ESTADO FLAG
+printf '%-46s %-11s %-9s %s\n' RETO FLAG.TXT SCRIPT SALIDA
 for dir in challenges/*/; do
   name="$(basename "$dir")"
+
+  # La verdad es flag.txt: solo existe si la plataforma confirmó la flag.
+  # El script puede imprimir conjeturas, así que no se usa como veredicto.
+  stored="—"
+  [[ -f "$dir/flag.txt" ]] && stored="$(tr -d '[:space:]' < "$dir/flag.txt")"
+
   script=""
   for cand in "$dir"solve.py "$dir"solve.sh; do
     if [[ -f "$cand" ]]; then script="$cand"; break; fi
   done
 
   if [[ -z "$script" ]]; then
-    printf '%-46s %-9s %s\n' "$name" "SIN" "(sin script)"
+    printf '%-46s %-11s %-9s %s\n' "$name" "$stored" "SIN" "(sin script)"
     continue
   fi
 
   out="$(run_one "$dir" "$script")"
-  if [[ -z "$out" ]]; then
-    printf '%-46s %-9s %s\n' "$name" "PENDIENTE" "(no produce flag)"
-  elif printf '%s' "$out" | grep -qE '_{3,}|\.\.\.'; then
-    printf '%-46s %-9s %s\n' "$name" "PARCIAL" "$out"
+  out="$(printf '%s' "$out" | tr -d '\r' | grep -oE 'EVIL\{[A-Za-z0-9_!$@#*.,+-]{2,96}\}' | sort -u | paste -sd' ')"
+
+  if [[ "$stored" != "—" ]]; then
+    if printf '%s' "$out" | grep -qF "$stored"; then
+      verdict="coincide"
+    else
+      verdict="DIFIERE"
+    fi
   else
-    printf '%-46s %-9s %s\n' "$name" "OK" "$out"
+    verdict="sin flag"
   fi
+  [[ -z "$out" ]] && out="(no imprime flag)"
+  printf '%-46s %-11s %-9s %s\n' "$name" "$stored" "$verdict" "${out:0:44}"
 done

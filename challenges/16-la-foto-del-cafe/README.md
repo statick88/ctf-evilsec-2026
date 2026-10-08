@@ -1,80 +1,96 @@
 # 16. La foto del café
 
-> **Status: unsolved** — the platform rejected the candidate below. No confirmed flag.
-
-**Category**: OSINT  
-**Difficulty**: EASY  
+**Category**: OSINT
+**Difficulty**: EASY
 **Points**: 100
+
+> **Estado: resuelto.** Flag confirmada por la plataforma del evento (veredicto `correct`).
 
 ## Description
 
-> Encontraste esta foto en un foro anónimo. Alguien dice que está "cerca de donde trabaja el objetivo". Descubre la ciudad exacta donde se tomó la foto.
-> Objetivo: Encontrar la ciudad.
-> **Formato de flag:** `EVIL{ciudad}`
+> Encontraste esta foto en un foro anónimo. Alguien dice que está "cerca de donde trabaja el
+> objetivo". Descubre la ciudad exacta donde se tomó la foto.
+> Objetivo: encontrar la ciudad. Flag: `EVIL{ciudad}`
 
-## Metadata Analysis
+## Reconnaissance
 
-```bash
-$ exiftool -a -u -g fotocafe.jpg
+La vía obvia es el EXIF, y aquí no hay nada:
+
+```console
+$ exiftool -a -u -g fotocafe.jpg | grep -iE 'gps|software|source|artist'
+Artist                          : ffe2273b-e7e6-4919-a6dd-cd3ff448007a
+Actions Software Agent          : Grok Imagine
+Actions Digital Source Type     : http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia
 ```
 
-**Relevant findings (verbatim from exiftool):**
+No hay GPS, ni modelo de cámara, ni marcas temporales. La imagen está **generada por IA**
+(manifiesto C2PA de Grok Imagine) y el propio manifiesto declara que es contenido algorítmico
+entrenado. Tampoco hay bytes ocultos tras el marcador EOI.
 
-- **File Type**: JPEG
-- **Image Size**: 784×1168 (portrait orientation)
-- **Encoding Process**: Baseline DCT, Huffman coding
-- **Software**: **Grok Imagine** (AI image generator by SpaceXAI/xAI)
-- **C2PA Metadata**: Present — AI-generated content
-  - `c2pa.actions.v2`: Action = `c2pa.created`, Software Agent = `Grok Imagine`, Digital Source Type = `trainedAlgorithmicMedia`
-  - `c2pa.creative_work`: Author Type = `Organization`, Author Name = `SpaceXAI`
-  - `c2pa.hash.data`: SHA-256 hash of pixel data (exclusions: bytes 2156–15617)
-  - `c2pa.claim.v2`: Claim Generator = `Grok Imagine 0.0.0`, C2PA Library = `0.76.2`
-  - `c2pa.signature`: Self-signed C2PA manifest
-- **Artist / UUID**: `ffe2273b-e7e6-4919-a6dd-cd3ff448007a`
-- **Image Description** and **User Comment**: Identical base64-encoded cryptographic signature (C2PA assertion hash)
-- **No GPS coordinates**, no camera model, no real timestamps in standard EXIF
-- **No JFIF resolution data** (Resolution Unit = None, X/Y Resolution = 1)
+Un intento anterior propuso `EVIL{santa_fe}` por correlación temática con otro reto del
+evento (la "costanera"). **La plataforma lo rechazó.** La coherencia temática entre retos no
+es evidencia: es la forma más rápida de perder tiempo.
 
-**Conclusion**: The image is **synthetic (AI-generated)**, not a real photograph. All metadata confirms generation by Grok Imagine (SpaceXAI). There is no geolocation data whatsoever in the file.
+## Analysis
 
-## Visual Analysis
+El error de partida fue tratar esto como un problema de metadatos. La imagen es sintética,
+así que los metadatos solo describen el generador. Pero *sintética* no significa *sin
+referencia*: un generador de imágenes no inventa el anfiteatro Flavio con esa precisión
+estructural por azar. El autor pidió esa vista, y la vista contiene la respuesta.
 
-The image (portrait 784×1168) depicts a cafe scene. As an AI-generated image, it represents an *idealized* cafe interior — tables, chairs, windows — with no verifiable correspondence to any real-world location. Visual inference from AI output is not reliable for geolocation.
+Mirando la imagen:
 
-## Attribution & Reasoning
+- Primer plano: un cappuccino con arte de latte sobre una mesa de madera, junto a una ventana.
+- Fondo, a la izquierda y **a través del vidrio**: el anfiteatro Flavio, el Colosseo de Roma.
+  Tres órdenes de arcos superpuestos, el segundo más bajo que el primero, la Solutions Curve
+  de ladrillo coronando el conjunto. Es inconfundible y no es una estructura genérica.
+- Al fondo a la derecha, colinas con vegetación y cielo despejado.
 
-The challenge text ("cerca de donde trabaja el objetivo") suggests a workplace district. However:
+El enunciado encaja: un café con esa vista está en una ciudad y, por tanto, en el lugar donde
+trabaja el objetivo. Ciudad: **Roma**.
 
-- The image contains **no real-world geographic markers** (street signs, landmarks, distinctive architecture)
-- AI generators (Grok Imagine) synthesize generic scenes from training data; they do not render specific coordinates unless explicitly prompted with a location name
-- The CTF's Argentine theme (Spanish language, "costanera", "capybara" in other challenges) provides **contextual correlation only**, not evidence
-- Challenge #17 (Puente Colgante) is confirmed to reference Santa Fe, but this does **not** prove challenge #16 shares the same city — thematic consistency is a hypothesis, not evidence
+## Exploitation
 
-**No city can be asserted from the available evidence.** The earlier candidate `santa_fe` (wrapped in standard flag format) was based on thematic speculation, not forensic or OSINT evidence. The platform rejected it.
+No hay nada que explotar; hay que mirar. El camino reproducible es:
 
-## Rejected candidate
+1. Descartar los metadatos (EXIF/C2PA) como fuente de ubicación.
+2. Mirar la imagen y describir lo que se ve, sin apoyarse en la temática del CTF.
+3. Nombrar el monumento y derivar la ciudad.
+4. Comprobar contra la plataforma:
 
-The candidate `santa_fe` (wrapped in standard flag format) was submitted and rejected.
-
-**Platform verdict**: `incorrect` (returned by `/api/v1/challenges/16/submit`).  
-**Reason for rejection**: The flag was a hypothesis derived from cross-challenge thematic correlation, not from evidence in the challenge artifact. The image is AI-generated with no geolocation data.
+```console
+$ python3 scripts/lib/ctf_platform.py submit 16 'EVIL{roma}'
+correct
+$ python3 scripts/lib/ctf_platform.py claim 16 'EVIL{roma}'
+#16 EVIL{roma} -> correct
+[ok] registrado en challenges/16-la-foto-del-cafe/flag.txt
+```
 
 ## Flag
 
-No confirmed flag. The artifact is AI-generated with no geolocation metadata.
+```
+EVIL{roma}
+```
 
 ## Key Takeaways
 
-- AI-generated images (C2PA/Grok Imagine) **cannot be geolocated** via visual analysis alone — they depict synthetic scenes, not real places
-- C2PA metadata (`trainedAlgorithmicMedia`) definitively identifies AI origin; treat as a signal that EXIF GPS/camera data is absent by design
-- Metadata stripping is standard in AI images; absence of GPS is expected, not a puzzle to solve
-- Thematic consistency across challenges in a CTF is a **pivot for hypothesis generation**, not evidence for flag submission
-- "Cerca de donde trabaja el objetivo" is a narrative framing, not a geolocatable clue when the image is synthetic
+- **Un manifiesto C2PA de imagen generada no elimina la pregunta**: cambia la fuente de la
+  respuesta de los metadatos al contenido. Un generador reproduce la referencia que le
+  pedimos; esa referencia es la pista.
+- **La calidad JPEG delata el pipeline.** Esta imagen es calidad 95 (Grok); el reto #17 del
+  mismo evento es una foto real en calidad 85. Comparar ese dato basta para separar las dos
+  categorías de reto sin herramientas especiales.
+- **La correlación temática entre retos es un sesgo peligroso.** La bandera del capybara
+  empujaba a "Santa Fe" sin ninguna evidencia; la plataforma lo rechazó.
+- Una imagen generada por IA no puede geolocalizarse por EXIF, pero sí puede identificar el
+  monumento que el autor quiso mostrar.
 
 ## References
 
-- [Grok Imagine (SpaceXAI)](https://grok.com/imagine) — AI image generator identified in C2PA metadata
-- [C2PA Specification](https://c2pa.org/specifications/) — Content Authenticity metadata standard
-- [IPTC Digital Source Type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype/) — `trainedAlgorithmicMedia` definition
+- Anfiteatro Flavio (Colosseo), Roma: https://es.wikipedia.org/wiki/Anfiteatro_Flavio
+- Content Credentials / C2PA: https://c2pa.org/
 
-(End of file - total 82 lines)
+## Solve Script
+
+`python3 solve.py` — vuelca los metadatos que descartan la vía EXIF, expone la lectura visual
+del encuadre y muestra la flag confirmada por la plataforma.
