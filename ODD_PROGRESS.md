@@ -1,7 +1,7 @@
 # EvilSec CTF — Progress Tracker
 
-**Last Updated**: 2026-10-08  
-**Status**: 12/21 solved · 2250 pts  
+**Last Updated**: 2026-10-09  
+**Status**: 13/21 solved · 2550 pts  
 **Platform**: EvilSec CTF (CTFd)  
 **Sync**: `python3 scripts/lib/ctf_platform.py audit`
 
@@ -11,7 +11,7 @@
 
 | # | Challenge | Category | Pts | Status | Flag |
 |---|-----------|----------|-----|--------|------|
-| 1 | MateVM 1 | Reversing | 300 | 🔴 Pending | — |
+| 1 | MateVM 1 | Reversing | 300 | ✅ Solved | `EVIL{RUST_VM_BYT3C0D3}` |
 | 2 | Susurros 1 | Forensic | 150 | ✅ Solved | `EVIL{l1nux_3s_l4_0nd4_nu3v4}` |
 | 3 | Susurros 2 | Forensic | 500 | 🔴 Pending | — |
 | 4 | MateVM 2 | Reversing | 500 | 🔴 Pending | — |
@@ -36,18 +36,6 @@
 ---
 
 ## Pending Challenges — Technical Blockers
-
-### 1. MateVM 1 (Reversing, 300 pts)
-**Blocker**: VM emulator incomplete — success condition unknown  
-**Current State**: 
-- Bytecode fully parsed: 21 `tmvml` blocks, 3-byte instructions [idx, opcode, operand]
-- 22 logical indices (0-21), index 1 missing, indices 1&2 missing per NOTES.md
-- Opcodes: 0x14 (PUSH), 0x0d (OP with codes 8-15 = ADD/SUB/XOR/AND/OR/NOT)
-- Stack-based VM, processes license char-by-char through 22 instruction sequences
-- Character classification restricts input to lowercase a-z
-- **Missing**: Success condition (empty stack? top=0? specific pattern?)
-- **Tested**: 15+ candidates via platform, all rejected
-- **Next**: Need qemu-x86_64 to trace read length & success condition, or complete VM reverse
 
 ### 3. Susurros 2 (Forensic, 500 pts)
 **Blocker**: Fragment 6 decoding ambiguity  
@@ -102,21 +90,30 @@
 - **Next**: Brute-force noise seed from image properties; implement noise generator
 
 ### 17. El Puente del Paseo (OSINT, 150 pts)
-**Blocker**: Real photo, stripped EXIF — no forensic geolocation  
+**Blocker**: Real photo, stripped EXIF — no metadata geolocation  
 **Current State**:
 - 1200×1200 JPEG, minimal EXIF (no GPS, camera, C2PA)
-- Visual: suspension bridge on costanera
-- Best match: Puente Colgante de Santa Fe (rejected)
+- Visual: suspension bridge on costanera / waterfront promenade
+- Best prior match: Puente Colgante de Santa Fe / Ing. Marcial Candioti, but submitted variants were rejected
 - **Submitted**: 10+ variants — all rejected
-- **Insight**: No forensic geolocation possible without metadata
+- **Next**: Re-open as visual comparison, not metadata forensics; compare tower geometry, cable pattern, shoreline, promenade railings/lights, and official bridge naming before any new submit
 
 ### 18. El Dron Olvidado (OSINT, 250 pts)
-**Blocker**: AI-generated (Grok Imagine) — no geolocation possible  
+**Blocker**: AI-generated image gives no metadata location; visual landmark still unresolved  
 **Current State**:
 - 1168×784 JPEG, C2PA: `trainedAlgorithmicMedia`, Software: `Grok Imagine`
-- Same generator as #16, different UUID
-- **Submitted**: Thematic guess `EVIL{reserva_ecologica_costanera_sur_buenos_aires}` rejected
-- **Insight**: AI drone images cannot be geolocated — synthetic scenes from prompts
+- Same generator class as #16, but AI provenance does not prove there is no intended landmark
+- Thematic guess `EVIL{reserva_ecologica_costanera_sur_buenos_aires}` rejected
+- **Next**: Treat as visual OSINT: compare aerial shoreline, green shore, pier/peninsula shape, road grid, and nearby urban layout against Argentine waterfront parks/reserves
+
+### 21. REwrite, REpeat (Web, 500 pts)
+**Blocker**: Apache 2.4.55 exposed, but no exploitable rewrite/proxy route found yet  
+**Current State**:
+- Root returns default `It works!` page; `Server: Apache/2.4.55 (Unix)`
+- `TRACE` is enabled and reflects request headers, but direct `/flag`, `/api`, `/rewrite`, `/repeat`, common paths, and Host variants returned default/404 behavior
+- Challenge wording points to frontend sanitization before backend processing: likely parser/rewrite mismatch
+- External research aligns with CVE-2023-25690 class: Apache 2.4.0–2.4.55 + `mod_rewrite`/`mod_proxy` variable substitution can enable request splitting/smuggling
+- **Next**: Find the hidden rewrite prefix or backend route, then test CRLF/request-smuggling payloads with strict rate limits and captured request/response evidence
 
 ---
 
@@ -133,17 +130,21 @@
 | `challenges/14-ecos-ocultos-bit-por-bit/extracted_data.json` | All 640 rows R/G/B ciphertexts |
 | `challenges/14-ecos-ocultos-bit-por-bit/README.md` | Corrected analysis, ruled-out list |
 | `challenges/15-ecos-ocultos-ruido-controlado/ruido_repaired.png` | Fixed PNG (valid IHDR CRC) |
+| `challenges/19-circo-beat/README.md` | CSS colors → shellcode → AES-256-CBC writeup |
+| `challenges/19-circo-beat/solve.py` | Static decoder for #19 |
+| `challenges/20-30-noches-de-ofrenda/README.md` | Zero-width Unicode stego writeup |
+| `challenges/20-30-noches-de-ofrenda/solve.py` | Zero-width bitstream decoder for #20 |
 | `scripts/lib/ctf_platform.py` | Authoritative platform sync |
 
 ---
 
 ## Next Session Priorities
 
-1. **MateVM 1** — Install qemu-user (compile from source) to trace read length & success condition
-2. **Susurros 2** — Request organizer hint; anomaly space closed
-3. **Gestor Respaldos** — Read `Preferencias.php` via LFI; test MARO header + gadget chains
-4. **Ecos Bit a Bit** — Test non-XOR cipher hypothesis; check IDAT CRC/palette for key
-5. **MateVM 2** — Differential analysis using MateVM 1 as reference
+1. **REwrite, REpeat (#21)** — Find hidden rewrite/proxy route, then test CVE-2023-25690-style request splitting safely
+2. **Susurros 2 (#3)** — Request organizer hint or identify special rule for fragment 6; current anomaly space is closed
+3. **Gestor Respaldos (#9)** — Read/derive `Preferencias` magic methods; test MARO header + gadget chains
+4. **Ecos Bit a Bit (#14)** — Test non-XOR cipher hypothesis; check IDAT CRC/palette for key
+5. **MateVM 2 (#4)** — Differential analysis using MateVM 1 as reference
 
 ---
 

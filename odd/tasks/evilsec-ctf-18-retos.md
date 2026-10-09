@@ -38,7 +38,7 @@ de estudio por categoría.
   o español neutro según el contexto ya existente; nunca jerga de persona.
 - Nada de fuerza bruta masiva ni DoS contra los objetivos: son retos EASY/MEDIUM con
   vulnerabilidades web lógicas y reversing estático.
-- Los objetivos web `192.99.247.166:8081-8085` soninstances del evento, autorizadas.
+- Los objetivos web `192.99.247.166:8081-8086` son instancias del evento, autorizadas.
 
 ## Mapa de retos
 
@@ -62,6 +62,9 @@ de estudio por categoría.
 | 16 | OSINT | 100 | EASY | La foto del café | Geolocalización de foto |
 | 17 | OSINT | 150 | EASY | El puente del paseo | Identificar puente en costanera |
 | 18 | OSINT | 250 | MEDIUM | El dron olvidado | Lugar exacto de toma |
+| 19 | REVERSING | 500 | HARD | Circo beat | CSS color stream → shellcode → CryptoAPI |
+| 20 | FORENSIC | 100 | EASY | 30 noches de ofrenda | Unicode invisible / zero-width stego |
+| 21 | WEB | 500 | HARD | REwrite, REpeat | Apache rewrite/proxy parser mismatch |
 
 ## Plan de trabajo
 
@@ -70,10 +73,10 @@ frente exige leer evidencia, iterar y producir writeup + script: le cabe entero 
 
 | Frente | Retos | Ruta |
 |--------|-------|------|
-| A — Web | 5, 6, 7, 8, 9 | delegado |
-| B — Reversing fácil/medio | 10, 11, 12, 1 | delegado |
+| A — Web | 5, 6, 7, 8, 9, 21 | delegado |
+| B — Reversing fácil/medio | 10, 11, 12, 1, 19 | delegado |
 | C — Reversing difícil | 4 | delegado (2º pase, tras ver el patrón de B) |
-| D — Forense de logs | 2, 3 | delegado |
+| D — Forense de logs/texto | 2, 3, 20 | delegado |
 | E — Forense de imágenes | 13, 14, 15 | delegado |
 | F — OSINT | 16, 17, 18 | delegado |
 
@@ -82,7 +85,7 @@ frente exige leer evidencia, iterar y producir writeup + script: le cabe entero 
 - [ ] Cada reto resuelto tiene su flag **validada por la plataforma** (veredicto `correct`).
 - [ ] `challenges/<id>-<slug>/README.md` existe y sigue la plantilla de writeup.
 - [ ] Existe un script ejecutable por reto que produce la flag sin pasos manuales.
-- [ ] `README.md` raíz con tabla de progreso (18/18, puntos) y enlaces.
+- [ ] `README.md` raíz con tabla de progreso (21/21, puntos) y enlaces.
 - [ ] `.env` y `metadata.json` sin versionar; `git status` limpio de secretos.
 - [ ] Un lector externo puede clonar y entender cada solución sin contexto oral.
 
@@ -102,7 +105,7 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 | 12 | RESUELTO | `EVIL{c_x0r_l00p_cr4ckm3}` | clave por inversión algebraica |
 | 13 | RESUELTO | `EVIL{l0v3_c4pyb4r4}` | base64 en chunk tEXt |
 | 16 | RESUELTO | `EVIL{roma}` | el encuadre muestra el Colosseo |
-| 1 | pendiente | — | VM Rust: opcode table parcial |
+| 1 | RESUELTO | `EVIL{RUST_VM_BYT3C0D3}` | VM 3-byte: decrypt bytecode + solve per-character constraints |
 | 3 | pendiente | — | 5 de 6 fragmentos; el 6º no cuadra |
 | 4 | pendiente | — | sin empezar |
 | 9 | pendiente | — | PHP deserialización; 1 solo solve en el evento |
@@ -112,9 +115,9 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 | 18 | pendiente | — | imagen IA (Grok), plaza con estatua ecuestre |
 | 19 | RESUELTO | `EVIL{3l_4m0r_d3spu3s_d3l_c1fr4d0}` | CSS colors → shellcode → AES-256-CBC |
 | 20 | RESUELTO | `EVIL{3l_s3cr3t0_d3l_p0mb3r0}` | Zero-width Unicode stego |
-| 21 | pendiente | — | Apache 2.4.55 / mod_rewrite smuggling hypothesis |
+| 21 | pendiente | — | Apache 2.4.55 / mod_rewrite smuggling hypothesis; no route found yet |
 
-**12/21 confirmadas por la plataforma · 2250 puntos.**
+**13/21 confirmadas por la plataforma · 2550 puntos.**
 
 ### Dos errores metodológicos que ya costaron tiempo (no repetirlos)
 
@@ -126,6 +129,19 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
    3, 16, 17 y 18 tenían writeups con flags que la plataforma rechazó. El auditor
    (`audit`) ahora compara README contra `flag.txt` y contra la plataforma, y `flag.txt`
    sólo se escribe tras un `correct` confirmado.
+
+## Pendientes activos
+
+| # | Reto | Bloqueo | Siguiente acción |
+|---|------|---------|------------------|
+| 3 | Susurros 2 | Fragmento 6 ambiguo y candidatos rechazados | Pista / regla especial para fragmento final |
+| 4 | MateVM 2 | VM reescrita y endurecida | Diferencial contra MateVM 1 |
+| 9 | Gestor Respaldos | Deserialización sin salida visible | Magic methods + MARO header |
+| 14 | Ecos Bit por Bit | LSB extraído, cifrado/key pendiente | Probar no-XOR y claves PNG |
+| 15 | Ecos Ruido | Semilla de ruido procedural pendiente | Reconstruir generador |
+| 17 | Puente del paseo | Sin metadata; candidatos Santa Fe rechazados | Comparación visual precisa |
+| 18 | Dron olvidado | AI/C2PA sin GPS; Costanera Sur rechazada | OSINT visual sobre costa/parque/trama urbana |
+| 21 | REwrite, REpeat | Ruta rewrite/proxy no identificada | Enumerar prefijo y probar smuggling acotado |
 
 ### Regla de oro del repo
 

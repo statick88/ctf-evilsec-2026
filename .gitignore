@@ -11,3 +11,4 @@ challenges/*/extract/
 challenges/*/out/
 # Local Pi runtime state
 .atl/
+.codegraph/

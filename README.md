@@ -14,11 +14,11 @@ Verificado contra la plataforma del evento con
 `python3 scripts/lib/ctf_platform.py audit`, que reconcilia el repo contra el scoreboard y
 vuelve a enviar cada `flag.txt`:
 
-- **12 / 21 retos resueltos · 2250 puntos** (a fecha de la última verificación)
+- **13 / 21 retos resueltos · 2550 puntos** (a fecha de la última verificación)
 
 | # | Categoría | Pts | Nombre | Estado | Flag |
 |---|-----------|-----|--------|--------|------|
-| 1 | Reversing | 300 | MateVM 1 | pendiente | — |
+| 1 | Reversing | 300 | MateVM 1 | **resuelto** | `EVIL{RUST_VM_BYT3C0D3}` |
 | 2 | Forense | 150 | Susurros 1 | **resuelto** | `EVIL{l1nux_3s_l4_0nd4_nu3v4}` |
 | 3 | Forense | 500 | Susurros 2 | pendiente | — |
 | 4 | Reversing | 500 | MateVM 2 | pendiente | — |
@@ -42,6 +42,19 @@ vuelve a enviar cada `flag.txt`:
 
 Los retos pendientes tienen writeup con el progreso real obtenido y están marcados
 `Status: unsolved`. No contienen flags inventadas.
+
+## Pendientes
+
+| # | Reto | Bloqueo actual | Próximo paso |
+|---|------|----------------|--------------|
+| 3 | Susurros 2 | El fragmento 6 decodifica `b39}` pero la frase esperada sugiere `ro}`; el espacio mecánico probado fue rechazado. | Pedir pista o buscar una segunda regla de codificación sólo para el último fragmento. |
+| 4 | MateVM 2 | Binario endurecido y sin marcadores `tmvml`; difiere fuerte de MateVM 1. | Hacer análisis diferencial contra MateVM 1 y localizar nueva fuente de bytecode. |
+| 9 | Gestor de Respaldos | Cookie PHP serializada detectada, pero `plantilla` no produce salida/LFI. | Identificar magic methods de `Preferencias` y probar el rol del marcador `AGENT-CAPYBARA-MARO`. |
+| 14 | Ecos Ocultos: Bit por Bit | LSB por filas extraído; clave/cifrado final no resuelto. | Revisar hipótesis no-XOR y posibles claves en estructura PNG/IDAT. |
+| 15 | Ecos Ocultos: Ruido Controlado | PNG reparado y filas ocultas extraídas; falta semilla del ruido procedural. | Reconstruir/bruteforcear generador de ruido desde dimensiones, CRCs y grilla de esquinas. |
+| 17 | El puente del paseo | Foto real sin GPS; la hipótesis Santa Fe fue rechazada en variantes probadas. | Comparar geometría del puente/costanera contra candidatos visuales antes de volver a enviar. |
+| 18 | El dron olvidado | Imagen con C2PA de Grok; no hay metadatos de ubicación y la hipótesis Costanera Sur fue rechazada. | Tratarla como reconocimiento visual, no como forense: comparar costa, parque y trama urbana. |
+| 21 | REwrite, REpeat | Apache 2.4.55 visible; no se encontró todavía ruta proxy/rewrite explotable. | Enumerar la regla de rewrite probable y probar CVE-2023-25690/request smuggling de forma acotada. |
 
 ## Uso
 
