@@ -65,6 +65,7 @@ de estudio por categoría.
 | 19 | REVERSING | 500 | HARD | Circo beat | CSS color stream → shellcode → CryptoAPI |
 | 20 | FORENSIC | 100 | EASY | 30 noches de ofrenda | Unicode invisible / zero-width stego |
 | 21 | WEB | 500 | HARD | REwrite, REpeat | Apache rewrite/proxy parser mismatch |
+| 22 | FORENSIC | 500 | HARD | Exfil Silenciosa | Exfiltración en DNS-over-TLS reconstruida desde PCAP |
 
 ## Plan de trabajo
 
@@ -77,7 +78,7 @@ frente exige leer evidencia, iterar y producir writeup + script: le cabe entero 
 | B — Reversing fácil/medio | 10, 11, 12, 1, 19 | delegado |
 | C — Reversing difícil | 4 | delegado (2º pase, tras ver el patrón de B) |
 | D — Forense de logs/texto | 2, 3, 20 | delegado |
-| E — Forense de imágenes | 13, 14, 15 | delegado |
+| E — Forense de imágenes/red | 13, 14, 15, 22 | delegado |
 | F — OSINT | 16, 17, 18 | delegado |
 
 ## Criterios de aceptación
@@ -85,7 +86,7 @@ frente exige leer evidencia, iterar y producir writeup + script: le cabe entero 
 - [ ] Cada reto resuelto tiene su flag **validada por la plataforma** (veredicto `correct`).
 - [ ] `challenges/<id>-<slug>/README.md` existe y sigue la plantilla de writeup.
 - [ ] Existe un script ejecutable por reto que produce la flag sin pasos manuales.
-- [ ] `README.md` raíz con tabla de progreso (21/21, puntos) y enlaces.
+- [ ] `README.md` raíz con tabla de progreso (22 retos visibles, puntos) y enlaces.
 - [ ] `.env` y `metadata.json` sin versionar; `git status` limpio de secretos.
 - [ ] Un lector externo puede clonar y entender cada solución sin contexto oral.
 
@@ -107,7 +108,7 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 | 16 | RESUELTO | `EVIL{roma}` | el encuadre muestra el Colosseo |
 | 1 | RESUELTO | `EVIL{RUST_VM_BYT3C0D3}` | VM 3-byte: decrypt bytecode + solve per-character constraints |
 | 3 | pendiente | — | 5 de 6 fragmentos; el 6º no cuadra |
-| 4 | pendiente | — | sin empezar |
+| 4 | RESUELTO | `EVIL{STATEFUL_VM_BYTECODE_2026}` | Emulación estática: selector 3 base `0x59d4`; 0..2 offsets con signo desde `0x6c48` |
 | 9 | pendiente | — | PHP deserialización; 1 solo solve en el evento |
 | 14 | pendiente | — | LSB con periodo 60, clave parcial |
 | 15 | pendiente | — | PNG restaurado a 430 filas; unfilter corregido; ruido procedural |
@@ -116,8 +117,9 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 | 19 | RESUELTO | `EVIL{3l_4m0r_d3spu3s_d3l_c1fr4d0}` | CSS colors → shellcode → AES-256-CBC |
 | 20 | RESUELTO | `EVIL{3l_s3cr3t0_d3l_p0mb3r0}` | Zero-width Unicode stego |
 | 21 | pendiente | — | Apache 2.4.55 / mod_rewrite smuggling hypothesis; no route found yet |
+| 22 | RESUELTO | `EVIL{d0t_tunnel1ng_r3ass3mbl3d_by_txid}` | SMTP/SSLKEYLOGFILE → DNS-over-TLS → Base32 reensamblado por ID de transacción |
 
-**13/21 confirmadas por la plataforma · 2550 puntos.**
+**15/22 confirmadas por la plataforma · 3550 puntos.**
 
 ### Dos errores metodológicos que ya costaron tiempo (no repetirlos)
 
@@ -135,7 +137,6 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 | # | Reto | Bloqueo | Siguiente acción |
 |---|------|---------|------------------|
 | 3 | Susurros 2 | Fragmento 6 ambiguo y candidatos rechazados | Pista / regla especial para fragmento final |
-| 4 | MateVM 2 | VM reescrita y endurecida | Diferencial contra MateVM 1 |
 | 9 | Gestor Respaldos | Deserialización sin salida visible | Magic methods + MARO header |
 | 14 | Ecos Bit por Bit | LSB extraído, cifrado/key pendiente | Probar no-XOR y claves PNG |
 | 15 | Ecos Ruido | Bitplanes directos descartados con unfilter correcto | Reconstruir generador/semilla de ruido |

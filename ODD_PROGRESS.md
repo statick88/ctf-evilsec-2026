@@ -1,7 +1,7 @@
 # EvilSec CTF — Progress Tracker
 
 **Last Updated**: 2026-10-09  
-**Status**: 13/21 solved · 2550 pts  
+**Status**: 15/22 solved · 3550 pts
 **Platform**: EvilSec CTF (CTFd)  
 **Sync**: `python3 scripts/lib/ctf_platform.py audit`
 
@@ -14,7 +14,7 @@
 | 1 | MateVM 1 | Reversing | 300 | ✅ Solved | `EVIL{RUST_VM_BYT3C0D3}` |
 | 2 | Susurros 1 | Forensic | 150 | ✅ Solved | `EVIL{l1nux_3s_l4_0nd4_nu3v4}` |
 | 3 | Susurros 2 | Forensic | 500 | 🔴 Pending | — |
-| 4 | MateVM 2 | Reversing | 500 | 🔴 Pending | — |
+| 4 | MateVM 2 | Reversing | 500 | ✅ Solved | `EVIL{STATEFUL_VM_BYTECODE_2026}` |
 | 5 | Banco Capybara | Web | 100 | ✅ Solved | `EVIL{bl1nd_0r_n0t_sql1_byp4ss}` |
 | 6 | Facturación Capybara | Web | 150 | ✅ Solved | `EVIL{1d0r_f4ctur4_4jen4}` |
 | 7 | Tablero Santuario | Web | 250 | ✅ Solved | `EVIL{ssti_j1nj4_rce_cl4ss1c}` |
@@ -32,6 +32,7 @@
 | 19 | Circo beat | Reversing | 500 | ✅ Solved | `EVIL{3l_4m0r_d3spu3s_d3l_c1fr4d0}` |
 | 20 | 30 noches de ofrenda | Forensic | 100 | ✅ Solved | `EVIL{3l_s3cr3t0_d3l_p0mb3r0}` |
 | 21 | REwrite, REpeat | Web | 500 | 🔴 Pending | — |
+| 22 | Exfil Silenciosa | Forensic | 500 | ✅ Solved | `EVIL{d0t_tunnel1ng_r3ass3mbl3d_by_txid}` |
 
 ---
 
@@ -48,14 +49,6 @@
 - **Proven**: Single-key ciphers on fragment 6 impossible except identity/mirror/ROT47 (brace-breaking)
 - **Submitted**: 23 new candidates + history (~30 total rejections)
 - **Status**: Closed mechanical space exhausted — recommend organizer hint
-
-### 4. MateVM 2 (Reversing, 500 pts)
-**Blocker**: Complete VM rewrite — 89% binary diff vs MateVM 1  
-**Current State**:
-- No visible strings (`MateVM`, `License`, `EVIL` all stripped)
-- New bytecode format (no `tmvml` markers), likely encrypted/split
-- Anti-tamper: control flow flattening, opaque predicates
-- **Next**: Differential analysis from MateVM 1 anchors (11% identical bytes)
 
 ### 9. Gestor de Respaldos Capybara (Web, 500 pts)
 **Blocker**: PHP deserialization — `plantilla` LFI not triggering output  
@@ -134,6 +127,11 @@
 | `challenges/19-circo-beat/solve.py` | Static decoder for #19 |
 | `challenges/20-30-noches-de-ofrenda/README.md` | Zero-width Unicode stego writeup |
 | `challenges/20-30-noches-de-ofrenda/solve.py` | Zero-width bitstream decoder for #20 |
+| `challenges/04-matevm-2/README.md` | Emulación estática validada de MateVM 2 |
+| `challenges/04-matevm-2/solve.py` | Reproductor estático de #4 |
+| `challenges/22-exfil-silenciosa/FICHA.md` | Metadatos del reto forense #22 |
+| `challenges/22-exfil-silenciosa/README.md` | Ruta DNS-over-TLS y reensamblado por ID de transacción |
+| `challenges/22-exfil-silenciosa/solve.py` | Reproductor del resultado validado de #22 |
 | `scripts/lib/ctf_platform.py` | Authoritative platform sync |
 
 ---
@@ -144,7 +142,7 @@
 2. **Susurros 2 (#3)** — Request organizer hint or identify special rule for fragment 6; current anomaly space is closed
 3. **Gestor Respaldos (#9)** — Read/derive `Preferencias` magic methods; test MARO header + gadget chains
 4. **Ecos Bit a Bit (#14)** — Test non-XOR cipher hypothesis; check IDAT CRC/palette for key
-5. **MateVM 2 (#4)** — Differential analysis using MateVM 1 as reference
+5. **Ecos Ocultos: Ruido Controlado (#15)** — Reconstruir generador o semilla de ruido
 
 ---
 

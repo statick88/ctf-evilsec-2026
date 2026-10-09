@@ -14,14 +14,14 @@ Verificado contra la plataforma del evento con
 `python3 scripts/lib/ctf_platform.py audit`, que reconcilia el repo contra el scoreboard y
 vuelve a enviar cada `flag.txt`:
 
-- **13 / 21 retos resueltos · 2550 puntos** (a fecha de la última verificación)
+- **15 / 22 retos resueltos · 3550 puntos** (a fecha de la última verificación)
 
 | # | Categoría | Pts | Nombre | Estado | Flag |
 |---|-----------|-----|--------|--------|------|
 | 1 | Reversing | 300 | MateVM 1 | **resuelto** | `EVIL{RUST_VM_BYT3C0D3}` |
 | 2 | Forense | 150 | Susurros 1 | **resuelto** | `EVIL{l1nux_3s_l4_0nd4_nu3v4}` |
 | 3 | Forense | 500 | Susurros 2 | pendiente | — |
-| 4 | Reversing | 500 | MateVM 2 | pendiente | — |
+| 4 | Reversing | 500 | MateVM 2 | **resuelto** | `EVIL{STATEFUL_VM_BYTECODE_2026}` |
 | 5 | Web | 100 | Banco Capybara | **resuelto** | `EVIL{bl1nd_0r_n0t_sql1_byp4ss}` |
 | 6 | Web | 150 | Facturación Capybara | **resuelto** | `EVIL{1d0r_f4ctur4_4jen4}` |
 | 7 | Web | 250 | Tablero del Santuario | **resuelto** | `EVIL{ssti_j1nj4_rce_cl4ss1c}` |
@@ -39,6 +39,7 @@ vuelve a enviar cada `flag.txt`:
 | 19 | Reversing | 500 | Circo beat | **resuelto** | `EVIL{3l_4m0r_d3spu3s_d3l_c1fr4d0}` |
 | 20 | Forense | 100 | 30 noches de ofrenda | **resuelto** | `EVIL{3l_s3cr3t0_d3l_p0mb3r0}` |
 | 21 | Web | 500 | REwrite, REpeat | pendiente | — |
+| 22 | Forense | 500 | Exfil Silenciosa | **resuelto** | `EVIL{d0t_tunnel1ng_r3ass3mbl3d_by_txid}` |
 
 Los retos pendientes tienen writeup con el progreso real obtenido y están marcados
 `Status: unsolved`. No contienen flags inventadas.
@@ -48,7 +49,6 @@ Los retos pendientes tienen writeup con el progreso real obtenido y están marca
 | # | Reto | Bloqueo actual | Próximo paso |
 |---|------|----------------|--------------|
 | 3 | Susurros 2 | El fragmento 6 decodifica `b39}` pero la frase esperada sugiere `ro}`; el espacio mecánico probado fue rechazado. | Pedir pista o buscar una segunda regla de codificación sólo para el último fragmento. |
-| 4 | MateVM 2 | Binario endurecido y sin marcadores `tmvml`; difiere fuerte de MateVM 1. | Hacer análisis diferencial contra MateVM 1 y localizar nueva fuente de bytecode. |
 | 9 | Gestor de Respaldos | Cookie PHP serializada detectada, pero `plantilla` no produce salida/LFI. | Identificar magic methods de `Preferencias` y probar el rol del marcador `AGENT-CAPYBARA-MARO`. |
 | 14 | Ecos Ocultos: Bit por Bit | LSB por filas extraído; clave/cifrado final no resuelto. | Revisar hipótesis no-XOR y posibles claves en estructura PNG/IDAT. |
 | 15 | Ecos Ocultos: Ruido Controlado | PNG restaurado a 430 filas con unfilter correcto; no hay flag directa en bitplanes comunes. | Reconstruir/bruteforcear generador de ruido desde dimensiones, CRC original y grilla de esquinas. |
@@ -111,6 +111,6 @@ o mirar el paisaje.
 
 - [`docs/web/`](docs/web/) — SQLi UNION para escalonar privilegios, IDOR, SSTI en Jinja2,
   confusión de algoritmo en JWT.
-- [`docs/forensics/`](docs/forensics/) — fragmentos en logs, estego en PNG.
-- [`docs/reversing/`](docs/reversing/) — XOR de un byte, recuperación de clave algebraica.
+- [`docs/forensics/`](docs/forensics/) — fragmentos en logs, estego en PNG y reconstrucción de túneles DNS-over-TLS.
+- [`docs/reversing/`](docs/reversing/) — XOR de un byte, recuperación de clave algebraica y emulación de VM.
 - [`docs/osint/`](docs/osint/) — geolocalización por contenido visual.
