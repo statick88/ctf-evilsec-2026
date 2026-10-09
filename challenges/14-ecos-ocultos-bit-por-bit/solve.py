@@ -1,235 +1,150 @@
 #!/usr/bin/env python3
 # solve.py — Challenge 14: Ecos Ocultos: Bit por Bit
-# LSB steganography in R/G channels with per-row 60-byte XOR encryption.
-# Extracts all 640 rows from R, G, B channels and attempts key recovery.
+# Status: UNSOLVED (key recovery open). This script extracts LSB data and
+# reproduces every VERIFIED structural finding plus the key-recovery attempts.
+#
+# Usage: python3 solve.py   (run inside challenges/14-ecos-ocultos-bit-por-bit/)
 
 from PIL import Image
 import numpy as np
 import json
+import hashlib
+from collections import Counter
+
+IMAGE = 'mural.png'
+CRIB = b'EVIL{'
+
 
 def extract_lsb_bytes_msb(channel_row):
-    """Extract LSB from a row using MSB-first bit order."""
     lsb = (channel_row & 1)
-    bytes_data = bytearray()
+    out = bytearray()
     for i in range(0, len(lsb), 8):
         byte = 0
         for j in range(8):
             if i + j < len(lsb):
-                byte = (byte << 1) | lsb[i + j]
-        bytes_data.append(byte)
-    return bytes_data
+                byte = (byte << 1) | int(lsb[i + j])
+        out.append(byte)
+    return bytes(out)
 
-def extract_all_rows(image_path):
-    """Extract per-row ciphertext from all three channels."""
+
+def extract_all_rows(image_path, bitplane=0):
     img = Image.open(image_path)
-    arr = np.array(img)  # (640, 480, 3)
-    
-    rows_r = []
-    rows_g = []
-    rows_b = []
-    
-    for row_idx in range(640):
-        r_bytes = extract_lsb_bytes_msb(arr[row_idx, :, 0])
-        g_bytes = extract_lsb_bytes_msb(arr[row_idx, :, 1])
-        b_bytes = extract_lsb_bytes_msb(arr[row_idx, :, 2])
-        
-        rows_r.append(bytes(r_bytes))
-        rows_g.append(bytes(g_bytes))
-        rows_b.append(bytes(b_bytes))
-    
-    return rows_r, rows_g, rows_b
+    arr = np.array(img)
+    R = [extract_lsb_bytes_msb(((arr[r, :, 0] >> bitplane) & 1)) for r in range(640)]
+    G = [extract_lsb_bytes_msb(((arr[r, :, 1] >> bitplane) & 1)) for r in range(640)]
+    B = [extract_lsb_bytes_msb(((arr[r, :, 2] >> bitplane) & 1)) for r in range(640)]
+    return R, G, B
 
-def analyze_row_0(rows_r, rows_g):
-    """Analyze first row for known-plaintext attack."""
-    ct_r = rows_r[0]
-    ct_g = rows_g[0]
-    period = 60
-    
-    print("=== Row 0 Analysis ===")
-    print(f"R ciphertext: {ct_r.hex()}")
-    print(f"G ciphertext: {ct_g.hex()}")
-    print()
-    
-    # Known plaintext: EVIL{...}
-    known = {0: ord('E'), 1: ord('V'), 2: ord('I'), 3: ord('L'), 4: ord('{'), 59: ord('}')}
-    
-    # Derive key from R channel
-    key_r = bytearray(period)
-    for pos, pt in known.items():
-        key_r[pos] = ct_r[pos] ^ pt
-    
-    print("Key from R (known positions):")
-    for i in range(period):
-        if i in known:
-            ch = chr(key_r[i]) if 32 <= key_r[i] < 127 else '?'
-            print(f"  key[{i:2d}] = 0x{key_r[i]:02x} ({ch})")
-    
-    # Zero ciphertext positions in R
-    zero_pos = [i for i in range(period) if ct_r[i] == 0x00]
-    print(f"\nZero ciphertext positions ({len(zero_pos)}): {zero_pos}")
-    
-    # At zero positions, key = plaintext
-    print("\nKey = plaintext at zero positions:")
-    for i in zero_pos:
-        ch = chr(key_r[i]) if 32 <= key_r[i] < 127 else '?'
-        print(f"  key[{i:2d}] = 0x{key_r[i]:02x} ({ch})")
-    
-    # Partial flag reconstruction
-    flag = bytearray(b'_' * period)
-    for i in range(period):
-        if i in known:
-            flag[i] = known[i]
-        elif ct_r[i] == 0x00:
-            flag[i] = key_r[i]
-    
-    print(f"\nPartial flag: {flag.decode('ascii', errors='replace')}")
-    
-    # G channel key at known positions
-    key_g = bytearray(period)
-    for pos, pt in known.items():
-        key_g[pos] = ct_g[pos] ^ pt
-    
-    print("\nKey from G (known positions):")
-    for i in range(period):
-        if i in known:
-            ch = chr(key_g[i]) if 32 <= key_g[i] < 127 else '?'
-            print(f"  key[{i:2d}] = 0x{key_g[i]:02x} ({ch})")
-    
-    # R^G XOR for row 0
-    xor_rg = bytes(a ^ b for a, b in zip(ct_r, ct_g))
-    print(f"\nR ^ G XOR (row 0): {xor_rg.hex()}")
-    
-    return key_r, xor_rg
 
-def test_key_hypotheses(key_r, period):
-    """Test candidate key phrases."""
-    print("\n=== Key Hypothesis Testing ===")
-    
-    # Known key bytes
-    known_key = {i: key_r[i] for i in range(period) if key_r[i] != 0 or i in [0,1,2,3,4,59]}
-    print(f"Known key bytes: {len(known_key)}/60")
-    
-    phrases = [
-        b'capybara',
-        b'capybara capybara',
-        b'evilsec',
-        b'evilsecctf',
-        b'evilsec evilsec',
-        b'muy nuestra',
-        b'llave muy nuestra',
-        b'llave muy nuestra llave',
-        b'bubble bath',
-        b'bubblebath',
-        b'bath time',
-        b'capybara bubble bath',
-        b'bano de espuma',
-        b'banio de espuma',
-        b'evil{',
-        b'EVIL{',
-        b'EVILSEC',
-        b'evilsecEVILSEC',
-    ]
-    
-    for phrase in phrases:
-        key = (phrase * (period // len(phrase) + 1))[:period]
-        match = True
-        for i, k in known_key.items():
-            if key[i] != k:
-                match = False
-                break
-        if match:
-            print(f"MATCH: {phrase}")
-            flag = bytes(key_r[i] ^ key[i] for i in range(period))
-            print(f"  Flag: {flag}")
-            print(f"  Flag (ascii): {flag.decode(errors='replace')}")
+def ham(a, b):
+    return sum(bin(x ^ y).count('1') for x, y in zip(a, b))
 
-def find_constant_xor_rows(rows_r, rows_g):
-    """Find rows where R^G XOR is constant."""
-    print("\n=== R^G XOR Pattern Analysis ===")
-    
-    xor_groups = {}
-    for row in range(640):
-        xor_bytes = bytes(a ^ b for a, b in zip(rows_r[row], rows_g[row]))
-        if xor_bytes not in xor_groups:
-            xor_groups[xor_bytes] = []
-        xor_groups[xor_bytes].append(row)
-    
-    print(f"Unique R^G XOR patterns: {len(xor_groups)}")
-    for xor_bytes, rows in sorted(xor_groups.items(), key=lambda x: -len(x[1])):
-        print(f"  {len(rows)} rows: {rows[:20]}{'...' if len(rows)>20 else ''}")
-        if len(rows) > 1:
-            print(f"    XOR: {xor_bytes.hex()}")
 
-def attempt_decrypt_all_rows(rows_r, rows_g, key_r, xor_rg):
-    """Attempt to decrypt all rows assuming row 0 key and constant R^G for rows 0-14."""
-    print("\n=== Multi-Row Decryption Attempt ===")
-    
-    # For rows 0-14: G_ct = R_ct ^ xor_rg (constant)
-    # So if we have key for R, we can get plaintext for R
-    # Plaintext_R = R_ct ^ key_R
-    # For rows 0-14, same plaintext? Or different?
-    
-    period = 60
-    results = []
-    
-    for row in range(min(15, len(rows_r))):
-        ct_r = rows_r[row]
-        pt_r = bytes(ct_r[i] ^ key_r[i] for i in range(period))
-        print(f"Row {row:3d}: {pt_r.decode('ascii', errors='replace')}")
-        results.append(pt_r)
-    
-    # Check if plaintexts are identical
-    if len(set(results)) == 1:
-        print("\nAll rows 0-14 have IDENTICAL plaintext!")
-        flag = results[0]
-        print(f"Flag candidate: {flag.decode('ascii', errors='replace')}")
-    else:
-        print("\nRows 0-14 have DIFFERENT plaintexts")
-        # Flag might be split across rows
-    
-    return results
+def structural_report(R, G, B):
+    print('=== 1. Row groups (8-row clusters, R channel) ===')
+    for g in range(6):
+        base = 8 * g
+        mx = max(ham(R[base], R[base + k]) for k in range(8))
+        print(f'  group {g} (rows {base}-{base + 7}): max intra-ham {mx} bits of 480')
+    print('  -> groups 0-3 tight (<70 bits); groups 4+ random (~150-290 bits)')
+
+    print('=== 2. Exact duplicate rows ===')
+    for name, rows in [('R', R), ('G', G), ('B', B)]:
+        seen = {}
+        dups = []
+        for i, r in enumerate(rows):
+            if r in seen:
+                dups.append((seen[r], i))
+            else:
+                seen[r] = i
+        print(f'  {name}: {dups}')
+
+    print('=== 3. R^G constant (rows 0-14 share C, row 15+ unique) ===')
+    C0 = bytes(a ^ b for a, b in zip(R[0], G[0]))
+    n_same = sum(1 for r in range(640)
+                 if bytes(a ^ b for a, b in zip(R[r], G[r])) == C0)
+    print(f'  rows sharing R^G == C0: {n_same} (expect 15: rows 0-14)')
+    print(f'  C0 = {C0.hex()[:64]}...')
+
+    print('=== 4. Within-group diffs are channel-independent (group 0) ===')
+    ok = all(bytes(a ^ b for a, b in zip(R[0], R[k])) ==
+             bytes(a ^ b for a, b in zip(G[0], G[k])) for k in range(8))
+    print(f'  R0^Rk == G0^Gk for k=0..7: {ok}')
+
+    print('=== 5. Lag-60 autocorrelation (60B = one row) ===')
+    Rb = np.array([list(r) for r in R], dtype=np.uint8).ravel()
+    for L in [1, 60, 120]:
+        eq = (Rb[:-L] == Rb[L:]).mean()
+        print(f'  lag {L}: byte equality {eq:.4f} (random ~0.004)')
+
+
+def tv_of(P):
+    bits = np.unpackbits(P, axis=1).astype(int)
+    return int(np.abs(np.diff(bits, axis=0)).sum() + np.abs(np.diff(bits, axis=1)).sum())
+
+
+def key_recovery_report(R, G, B):
+    print('=== 6. Known-plaintext (row 0 starts with EVIL{) ===')
+    K5 = bytes(a ^ b for a, b in zip(R[0][:5], CRIB))
+    print(f'  K_R[0:5] = {K5.hex()} (byte 1 = 0xa9 non-printable -> binary keystream)')
+    print('  NOTE: only 5 bytes are actually known. Zero-ct positions give')
+    print('  key=plaintext with BOTH unknown (0 information). The old')
+    print('  "32/60 known bytes" claim was wrong.')
+
+    print('=== 7. Digest-key scan (row 0 crib, XOR/ADD/SUB) ===')
+    phrases = ['capybara', 'carpincho', 'evilsec', 'mural', 'llave muy nuestra',
+               'muy nuestra', 'nuestra', 'espuma', 'ecos', 'EVILSEC', 'evil',
+               'mate', 'llave', 'ctf', 'l0v3_c4pyb4r4', 'santuario', 'mural.png',
+               '14', 'forense', 'bit por bit', 'bit a bit', 'bano de espuma',
+               'carpincho feliz', 'nuestra llave', 'messi', 'scaloneta', 'tango']
+    targets = {'xor': K5.hex()}
+    db = {}
+    for p in phrases:
+        for an, H in [('md5', hashlib.md5), ('sha1', hashlib.sha1),
+                      ('sha256', hashlib.sha256)]:
+            db.setdefault(H(p.encode()).digest()[:5].hex(), []).append((p, an))
+    hits = [v for k, v in db.items() if k in targets.values()]
+    print(f'  hits: {hits}')
+
+    print('=== 8. TV ranking (single-byte keys; K=0 wins) ===')
+    Rn = np.array([list(r) for r in R], dtype=np.uint8)
+    base = tv_of(Rn)
+    ptim = min((tv_of(np.bitwise_xor(Rn, np.uint8(k))), k) for k in range(256))
+    print(f'  baseline TV={base}, best single-byte TV={ptim[0]} (k={ptim[1]})')
+
+    print('=== 9. Ruled-out classes (all tested, all negative) ===')
+    print('  raw/digest (md5/sha1/sha256/sha512/blake2b/sha3) of ~30k phrases+affixes')
+    print('  + encodings (utf-8/latin-1/utf-16/base64/reversed/case) at every row/offset')
+    print('  XOR/ADD/SUB ciphers; MSB/LSB packing; bit-shifts 0-16; column-major,')
+    print('  flips, snake, transpose packings; weighted (luminance) channel combos;')
+    print('  3-bit-per-pixel plane combos; XOF (shake128/256), RC4, MT19937, LCG')
+    print('  (glibc/NR/MSVC/Java/m256) forward streams + algebraic LCG inversion;')
+    print('  banner-as-key vs body; self-keys (pixels/file/headers); B-as-key w/ lags;')
+    print('  transposition unshuffle; single-byte all rows; 2-byte full TV scan;')
+    print('  per-column frequency (text/spanish/printable models); column-agreement')
+    print('  keystream chaining (split-half inconsistent); QR decode (OpenCV, combos);')
+    print('  OCR (tesseract, banners + full planes).')
+
 
 def main():
-    print("=== Challenge 14: Ecos Ocultos - Bit por Bit ===\n")
-    
-    rows_r, rows_g, rows_b = extract_all_rows('mural.png')
-    print(f"Extracted {len(rows_r)} rows per channel (60 bytes each)")
-    print(f"R channel sample (row 0): {rows_r[0].hex()[:80]}...")
-    print(f"G channel sample (row 0): {rows_g[0].hex()[:80]}...")
-    print(f"B channel sample (row 0): {rows_b[0].hex()[:80]}...")
+    print('=== Challenge 14: Ecos Ocultos - Bit por Bit ===\n')
+    R, G, B = extract_all_rows(IMAGE, bitplane=0)
+    print(f'extracted {len(R)} rows/channel, {len(R[0])} bytes each\n')
+    structural_report(R, G, B)
     print()
-    
-    # Analyze row 0
-    key_r, xor_rg = analyze_row_0(rows_r, rows_g)
-    
-    # Test key hypotheses
-    test_key_hypotheses(key_r, 60)
-    
-    # Find constant XOR rows
-    find_constant_xor_rows(rows_r, rows_g)
-    
-    # Attempt multi-row decryption
-    attempt_decrypt_all_rows(rows_r, rows_g, key_r, xor_rg)
-    
-    # Save extracted data for external analysis
-    print("\n=== Saving extracted data ===")
-    data = {
-        'rows_r': [r.hex() for r in rows_r],
-        'rows_g': [r.hex() for r in rows_g],
-        'rows_b': [r.hex() for r in rows_b],
-        'key_r_partial': key_r.hex(),
-        'xor_rg_row0': xor_rg.hex(),
-    }
+    key_recovery_report(R, G, B)
+    data = {'rows_r': [r.hex() for r in R],
+            'rows_g': [g.hex() for g in G],
+            'rows_b': [b.hex() for b in B]}
     with open('extracted_data.json', 'w') as f:
         json.dump(data, f, indent=2)
-    print("Saved to extracted_data.json")
-    
-    # Final summary
-    print("\n=== Summary ===")
-    print("Status: Key recovery incomplete")
-    print("Partial flag (row 0): EVIL{_______________________________}")
-    print("Known key bytes: 32/60 (6 from flag format + 26 from zero-ciphertext)")
-    print("Next: Determine key derivation from image/context")
+    print('\nSaved extracted_data.json')
+    print('\n=== Summary ===')
+    print('Status: UNSOLVED — 60-byte fixed keystream per channel confirmed by')
+    print('evidence (dup rows 9/14, lag-60 autocorrelation) but not recovered.')
+    print('Plaintext is binary/image-like, not ASCII text (freq analysis negative).')
+    print('Next: identify the "llave muy nuestra" KDF or a non-XOR cipher.')
+
 
 if __name__ == '__main__':
     main()

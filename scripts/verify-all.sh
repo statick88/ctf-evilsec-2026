@@ -19,7 +19,7 @@ run_one() {
   else
     out="$(cd "$dir" && timeout 120 bash "$base" 2>&1)"
   fi
-  printf '%s' "$out" | tr -d '\r' | grep -oE 'EVIL\{[^}]*\}' | sort -u | paste -sd' '
+  printf '%s' "$out" | tr -d '\r' | grep -oE 'EVIL\{[^}]*\}' | sort -u | paste -s -d ' ' -
 }
 
 printf '%-46s %-11s %-9s %s\n' RETO FLAG.TXT SCRIPT SALIDA
@@ -42,7 +42,7 @@ for dir in challenges/*/; do
   fi
 
   out="$(run_one "$dir" "$script")"
-  out="$(printf '%s' "$out" | tr -d '\r' | grep -oE 'EVIL\{[A-Za-z0-9_!$@#*.,+-]{2,96}\}' | sort -u | paste -sd' ')"
+  out="$(printf '%s' "$out" | tr -d '\r' | grep -oE 'EVIL\{[A-Za-z0-9_!$@#*.,+-]{2,96}\}' | sort -u | paste -s -d ' ' -)"
 
   if [[ "$stored" != "—" ]]; then
     if printf '%s' "$out" | grep -qF "$stored"; then

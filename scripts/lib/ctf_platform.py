@@ -129,7 +129,10 @@ def readme_flag(dirpath: Path) -> str | None:
     if m:
         rest = text[m.end():]
         nxt = re.search(r"^##\s+", rest, re.MULTILINE)
-        scopes.append(rest[: nxt.start()] if nxt else rest)
+        flag_section = rest[: nxt.start()] if nxt else rest
+        if re.search(r"no confirmed flag|sin flag confirmada", flag_section, re.IGNORECASE):
+            return None
+        scopes.append(flag_section)
     scopes.append(text)
 
     for scope in scopes:

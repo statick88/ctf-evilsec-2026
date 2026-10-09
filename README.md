@@ -1,4 +1,4 @@
-# EvilSec CTF — 18 retos resueltos y documentados
+# EvilSec CTF — retos resueltos y documentados
 
 Writeups reproducibles del evento **EvilSec CTF**. Cada reto vive en su propia carpeta con
 el método, el porqué de la vulnerabilidad y un script que devuelve la flag sin pasos
@@ -14,7 +14,7 @@ Verificado contra la plataforma del evento con
 `python3 scripts/lib/ctf_platform.py audit`, que reconcilia el repo contra el scoreboard y
 vuelve a enviar cada `flag.txt`:
 
-- **10 / 18 retos resueltos · 1650 puntos · puesto 7** (a fecha de la última verificación)
+- **12 / 21 retos resueltos · 2250 puntos** (a fecha de la última verificación)
 
 | # | Categoría | Pts | Nombre | Estado | Flag |
 |---|-----------|-----|--------|--------|------|
@@ -36,6 +36,9 @@ vuelve a enviar cada `flag.txt`:
 | 16 | OSINT | 100 | La foto del café | **resuelto** | `EVIL{roma}` |
 | 17 | OSINT | 150 | El puente del paseo | pendiente | — |
 | 18 | OSINT | 250 | El dron olvidado | pendiente | — |
+| 19 | Reversing | 500 | Circo beat | **resuelto** | `EVIL{3l_4m0r_d3spu3s_d3l_c1fr4d0}` |
+| 20 | Forense | 100 | 30 noches de ofrenda | **resuelto** | `EVIL{3l_s3cr3t0_d3l_p0mb3r0}` |
+| 21 | Web | 500 | REwrite, REpeat | pendiente | — |
 
 Los retos pendientes tienen writeup con el progreso real obtenido y están marcados
 `Status: unsolved`. No contienen flags inventadas.

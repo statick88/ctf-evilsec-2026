@@ -1,8 +1,8 @@
-# EvilSec CTF — resolver los 18 retos y documentarlos
+# EvilSec CTF — resolver los retos y documentarlos
 
 ## Objetivo
 
-Resolver los 18 retos del evento **EvilSec CTF** (`https://evilsec-ctf.mbarete.dev/challenges`)
+Resolver los retos del evento **EvilSec CTF** (`https://evilsec-ctf.mbarete.dev/challenges`)
 y dejar cada solución reproducible y explicada en un repositorio navegable: por reto,
 un `README.md` con el método, el porqué de la vulnerabilidad y un script ejecutable
 que devuelve la flag sin pasos manuales.
@@ -18,7 +18,7 @@ de estudio por categoría.
 
 **Dentro de alcance**
 
-- Resolver los 18 retos y **enviar la flag a la plataforma** para validar el veredicto.
+- Resolver los retos y **enviar la flag a la plataforma** para validar el veredicto.
 - Un `README.md` por reto: categoría, enunciado, recon, análisis, explotación, flag,
   script de resolución y key takeaways.
 - Un script ejecutable por reto (`solve.sh` / `solve.py`) que produce la flag.
@@ -110,8 +110,11 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 | 15 | pendiente | — | PNG con CRC roto; ruido procedural |
 | 17 | pendiente | — | foto real (q85), puente atirantado en A |
 | 18 | pendiente | — | imagen IA (Grok), plaza con estatua ecuestre |
+| 19 | RESUELTO | `EVIL{3l_4m0r_d3spu3s_d3l_c1fr4d0}` | CSS colors → shellcode → AES-256-CBC |
+| 20 | RESUELTO | `EVIL{3l_s3cr3t0_d3l_p0mb3r0}` | Zero-width Unicode stego |
+| 21 | pendiente | — | Apache 2.4.55 / mod_rewrite smuggling hypothesis |
 
-**10/18 confirmadas por la plataforma · 1650 puntos · puesto 7.**
+**12/21 confirmadas por la plataforma · 2250 puntos.**
 
 ### Dos errores metodológicos que ya costaron tiempo (no repetirlos)
 
