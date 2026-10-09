@@ -110,7 +110,7 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 | 4 | pendiente | — | sin empezar |
 | 9 | pendiente | — | PHP deserialización; 1 solo solve en el evento |
 | 14 | pendiente | — | LSB con periodo 60, clave parcial |
-| 15 | pendiente | — | PNG con CRC roto; ruido procedural |
+| 15 | pendiente | — | PNG restaurado a 430 filas; unfilter corregido; ruido procedural |
 | 17 | pendiente | — | foto real (q85), puente atirantado en A |
 | 18 | pendiente | — | imagen IA (Grok), plaza con estatua ecuestre |
 | 19 | RESUELTO | `EVIL{3l_4m0r_d3spu3s_d3l_c1fr4d0}` | CSS colors → shellcode → AES-256-CBC |
@@ -138,7 +138,7 @@ Estado verificado contra la plataforma (`scripts/lib/ctf_platform.py audit`).
 | 4 | MateVM 2 | VM reescrita y endurecida | Diferencial contra MateVM 1 |
 | 9 | Gestor Respaldos | Deserialización sin salida visible | Magic methods + MARO header |
 | 14 | Ecos Bit por Bit | LSB extraído, cifrado/key pendiente | Probar no-XOR y claves PNG |
-| 15 | Ecos Ruido | Semilla de ruido procedural pendiente | Reconstruir generador |
+| 15 | Ecos Ruido | Bitplanes directos descartados con unfilter correcto | Reconstruir generador/semilla de ruido |
 | 17 | Puente del paseo | Sin metadata; candidatos Santa Fe rechazados | Comparación visual precisa |
 | 18 | Dron olvidado | AI/C2PA sin GPS; Costanera Sur rechazada | OSINT visual sobre costa/parque/trama urbana |
 | 21 | REwrite, REpeat | Ruta rewrite/proxy no identificada | Enumerar prefijo y probar smuggling acotado |

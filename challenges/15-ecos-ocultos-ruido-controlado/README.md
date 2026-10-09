@@ -29,15 +29,17 @@ $ exiftool ruido.png
 ```
 
 ### Structural Damage
-PNG chunk analysis reveals **corrupted IHDR CRC**:
+PNG chunk analysis reveals an **IHDR height/CRC mismatch**:
 
 ```
-IHDR chunk: length=13, CRC=BAD
-  Calculated CRC: 0x65fdde11
-  Stored CRC:     0x706fc708
+IHDR chunk: length=13
+  File height:          350
+  Stored CRC:           0x706fc708
+  CRC if height = 350:  0x65fdde11
+  CRC if height = 430:  0x706fc708
 ```
 
-The IHDR data itself is valid (625×350, 8-bit RGB, color type 2), but the CRC is wrong. This explains "algunos visores ni siquiera la abren" — some viewers reject the file due to CRC mismatch.
+The stored CRC is not random corruption: it is exactly the CRC for the same IHDR with height **430**. The file was cropped by changing the height from 430 to 350 while leaving the original CRC and all IDAT scanlines in place. This explains "algunos visores ni siquiera la abren" — strict viewers reject the mismatched CRC.
 
 All other chunks (7× IDAT, IEND) have valid CRCs. No trailing data after IEND.
 
@@ -48,11 +50,15 @@ The original image was **430×625** (350 + 80 rows). The bottom 80 rows were "cr
 
 ## Repair
 
-Fixed IHDR CRC by recalculating:
+The correct repair is to restore IHDR height to 430, which also makes the stored CRC valid:
+
 ```python
-correct_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xffffffff  # 0x65fdde11
+ihdr_height = 430
+correct_crc = zlib.crc32(b'IHDR' + ihdr_data_with_height_430) & 0xffffffff
+# 0x706fc708, matching the stored CRC
 ```
-Repaired PNG (`ruido_repaired.png`) opens normally in all viewers.
+
+`solve.py` writes `ruido_fixed.png` with height 430 and a standards-correct PNG structure.
 
 ## Analysis
 
@@ -106,11 +112,15 @@ The G channel corner grid uses **all 256 byte values** (0–255), suggesting a p
 - Distribution heavily skewed: values 0, 255, 1, 254, 2, 253... appear most frequently
 - This indicates a permutation-based hash: `value = perm[(perm[x] + y) % 256]`
 
-### LSB Steganography Check
-- Full image LSB (all channels): No flag found
-- Corner grid LSB: No flag found
-- Extra rows LSB: No flag found
-- All bit planes (0–7) checked: No flag found
+### Bitplane Steganography Check
+
+`solve.py` now performs a standards-correct PNG unfilter for all 430 rows. A previous working script used the filtered compressed prior scanline as the predictor for filters 2–4; that invalidated downstream hidden-row images. The corrected decoder matches Pillow when the height is restored to 430.
+
+Current direct extraction status:
+- Full image direct bitplanes 0–7, R/G/B/RGB/BGR, big/little bit order: no `EVIL{...}` found
+- Visible rows direct bitplanes 0–7: no `EVIL{...}` found
+- Hidden rows 350–429 direct bitplanes 0–7: no `EVIL{...}` found
+- Common multi-plane orders (`0,1,2`, `7,6,5`, full byte LSB/MSB per channel): no `EVIL{...}` found
 - Noise parameters (octaves, persistence, lacunarity): Not directly visible
 
 ## Hypothesis
@@ -127,7 +137,7 @@ The corrupted CRC value `0x706fc708` is itself meaningful (intentional corruptio
 
 ## Recovery Status
 
-**Unsolved** — Flag not found in LSB, bit planes, or visual inspection of full/hidden image. Noise is procedural value noise with 8×8 grid (44×79 corners for 350×625, 54×79 for 430×625). Seed likely derivable from image properties (dimensions, CRC). Requires identifying noise algorithm and reverse-engineering seed.
+**Unsolved** — Flag not found after corrected 430-row PNG recovery and direct/common bitplane extraction. Noise is procedural-looking value noise with 8×8 grid evidence (44×79 corners for visible 350×625, 54×79 for full 430×625). Seed or generation parameters may be derivable from image properties (dimensions, restored height, CRC), but the encoding is not a direct bitplane flag.
 
 ## Flag
 

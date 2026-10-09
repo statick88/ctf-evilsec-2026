@@ -82,12 +82,12 @@
 ### 15. Ecos Ocultos: Ruido Controlado (Forensic, 500 pts)
 **Blocker**: Procedural noise seed recovery  
 **Current State**:
-- PNG with corrupted IHDR CRC (fixed: 0x65fdde11)
+- IHDR height was changed from 430 to 350 while preserving the original CRC (`0x706fc708`); restoring height 430 makes the CRC valid
 - 80 hidden rows in IDAT (original 430×625, cropped to 350×625)
-- Procedural 8×8 value noise, corner grid 44×79 / 54×79
-- G channel corners: permutation table (all 256 values)
-- **Tested**: 15 seed candidates (dimensions, CRCs, file size, phrases) — all rejected
-- **Next**: Brute-force noise seed from image properties; implement noise generator
+- `solve.py` now uses standards-correct PNG unfiltering; previous hidden-row images used filtered prior rows for filters 2–4 and were invalid
+- Corrected direct bitplane scan: all/visible/hidden rows, R/G/B/RGB/BGR, bits 0–7, big/little order, plus common multi-plane orders — no flag-shaped token
+- Procedural 8×8 value noise evidence remains the best lead; direct bitplane extraction is not enough
+- **Next**: Brute-force/reconstruct noise seed or generator parameters from image properties
 
 ### 17. El Puente del Paseo (OSINT, 150 pts)
 **Blocker**: Real photo, stripped EXIF — no metadata geolocation  
@@ -129,7 +129,7 @@
 | `challenges/09-gestor-de-respaldos-capybara/solve.py` | Basic LFI attempt script |
 | `challenges/14-ecos-ocultos-bit-por-bit/extracted_data.json` | All 640 rows R/G/B ciphertexts |
 | `challenges/14-ecos-ocultos-bit-por-bit/README.md` | Corrected analysis, ruled-out list |
-| `challenges/15-ecos-ocultos-ruido-controlado/ruido_repaired.png` | Fixed PNG (valid IHDR CRC) |
+| `challenges/15-ecos-ocultos-ruido-controlado/ruido_fixed.png` | Restored PNG height 430 with valid original IHDR CRC |
 | `challenges/19-circo-beat/README.md` | CSS colors → shellcode → AES-256-CBC writeup |
 | `challenges/19-circo-beat/solve.py` | Static decoder for #19 |
 | `challenges/20-30-noches-de-ofrenda/README.md` | Zero-width Unicode stego writeup |

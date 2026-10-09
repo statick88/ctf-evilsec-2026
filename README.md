@@ -51,7 +51,7 @@ Los retos pendientes tienen writeup con el progreso real obtenido y están marca
 | 4 | MateVM 2 | Binario endurecido y sin marcadores `tmvml`; difiere fuerte de MateVM 1. | Hacer análisis diferencial contra MateVM 1 y localizar nueva fuente de bytecode. |
 | 9 | Gestor de Respaldos | Cookie PHP serializada detectada, pero `plantilla` no produce salida/LFI. | Identificar magic methods de `Preferencias` y probar el rol del marcador `AGENT-CAPYBARA-MARO`. |
 | 14 | Ecos Ocultos: Bit por Bit | LSB por filas extraído; clave/cifrado final no resuelto. | Revisar hipótesis no-XOR y posibles claves en estructura PNG/IDAT. |
-| 15 | Ecos Ocultos: Ruido Controlado | PNG reparado y filas ocultas extraídas; falta semilla del ruido procedural. | Reconstruir/bruteforcear generador de ruido desde dimensiones, CRCs y grilla de esquinas. |
+| 15 | Ecos Ocultos: Ruido Controlado | PNG restaurado a 430 filas con unfilter correcto; no hay flag directa en bitplanes comunes. | Reconstruir/bruteforcear generador de ruido desde dimensiones, CRC original y grilla de esquinas. |
 | 17 | El puente del paseo | Foto real sin GPS; la hipótesis Santa Fe fue rechazada en variantes probadas. | Comparar geometría del puente/costanera contra candidatos visuales antes de volver a enviar. |
 | 18 | El dron olvidado | Imagen con C2PA de Grok; no hay metadatos de ubicación y la hipótesis Costanera Sur fue rechazada. | Tratarla como reconocimiento visual, no como forense: comparar costa, parque y trama urbana. |
 | 21 | REwrite, REpeat | Apache 2.4.55 visible; no se encontró todavía ruta proxy/rewrite explotable. | Enumerar la regla de rewrite probable y probar CVE-2023-25690/request smuggling de forma acotada. |

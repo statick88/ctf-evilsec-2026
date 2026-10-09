@@ -1,184 +1,213 @@
 #!/usr/bin/env python3
-# solve.py — Challenge 15: Ecos Ocultos: Ruido Controlado
-# Repairs corrupted PNG (bad IHDR CRC), analyzes procedural noise for hidden flag.
+"""Analyze challenge 15: Ecos Ocultos: Ruido Controlado.
 
+The PNG was cropped by changing the IHDR height from 430 to 350 while leaving
+all IDAT scanlines and the original IHDR CRC in place.  The correct first step
+is therefore to restore height 430 and unfilter every scanline with the PNG
+standard algorithm.  Hidden rows and bitplanes are then checked without claiming
+a flag unless one is actually present.
+"""
+
+from __future__ import annotations
+
+import re
 import struct
 import zlib
-from PIL import Image
+from pathlib import Path
+
 import numpy as np
-import re
+from PIL import Image
 
-def repair_png(input_path, output_path):
-    with open(input_path, 'rb') as f:
-        data = bytearray(f.read())
-    
-    # Fix IHDR CRC (pos 29-32)
-    chunk_type = data[12:16]  # b'IHDR'
-    chunk_data = data[16:29]  # 13 bytes
-    correct_crc = zlib.crc32(chunk_type + chunk_data) & 0xffffffff
-    data[29:33] = struct.pack('>I', correct_crc)
-    
-    with open(output_path, 'wb') as f:
-        f.write(data)
-    return output_path
+BINARY_FLAG = re.compile(rb"EVIL\{[^}\r\n]{1,128}\}")
+INPUT = Path(__file__).with_name("ruido.png")
+WIDTH = 625
+VISIBLE_HEIGHT = 350
+BYTES_PER_PIXEL = 3
 
-def extract_full_image(input_path, output_path):
-    """Reconstruct full 430x625 image from all IDAT data."""
-    with open(input_path, 'rb') as f:
-        data = f.read()
-    
-    # Extract all IDAT chunks
+
+def read_chunks(data: bytes) -> list[tuple[bytes, bytes, bytes]]:
+    chunks: list[tuple[bytes, bytes, bytes]] = []
     pos = 8
-    idat_data = b''
     while pos < len(data):
-        length = struct.unpack('>I', data[pos:pos+4])[0]
-        chunk_type = data[pos+4:pos+8]
-        chunk_data = data[pos+8:pos+8+length]
-        if chunk_type == b'IDAT':
-            idat_data += chunk_data
+        length = struct.unpack(">I", data[pos : pos + 4])[0]
+        chunk_type = data[pos + 4 : pos + 8]
+        chunk_data = data[pos + 8 : pos + 8 + length]
+        crc = data[pos + 8 + length : pos + 12 + length]
+        chunks.append((chunk_type, chunk_data, crc))
         pos += 12 + length
-        if chunk_type == b'IEND':
+        if chunk_type == b"IEND":
             break
-    
-    decompressed = bytearray(zlib.decompress(idat_data))
-    
-    # Reconstruct full image (430 rows x 625 cols x 3 channels)
-    width = 625
-    height = 430
-    bytes_per_row = 1 + width * 3
-    
-    img_data = bytearray(height * width * 3)
+    return chunks
+
+
+def paeth(left: int, up: int, up_left: int) -> int:
+    p = left + up - up_left
+    pa = abs(p - left)
+    pb = abs(p - up)
+    pc = abs(p - up_left)
+    if pa <= pb and pa <= pc:
+        return left
+    if pb <= pc:
+        return up
+    return up_left
+
+
+def unfilter_png_scanlines(raw: bytes, width: int, bpp: int) -> np.ndarray:
+    stride = 1 + width * bpp
+    if len(raw) % stride != 0:
+        raise ValueError(f"raw IDAT length {len(raw)} is not a multiple of row stride {stride}")
+
+    height = len(raw) // stride
+    previous = bytearray(width * bpp)
+    output = bytearray()
+    filter_counts: dict[int, int] = {}
+
     for y in range(height):
-        row_start = y * bytes_per_row
-        row_end = row_start + bytes_per_row
-        if row_end <= len(decompressed):
-            row = bytearray(decompressed[row_start:row_end])
-            filter_byte = row[0]
-            pixels = row[1:]
-            # Apply PNG filter
-            if filter_byte == 0:  # None
-                pass
-            elif filter_byte == 1:  # Sub
-                for i in range(3, len(pixels)):
-                    pixels[i] = (pixels[i] + pixels[i-3]) % 256
-            elif filter_byte == 2:  # Up
-                if y > 0:
-                    prev_row_start = (y-1) * bytes_per_row
-                    prev_row_end = prev_row_start + bytes_per_row
-                    prev_row = bytearray(decompressed[prev_row_start:prev_row_end])
-                    prev_pixels = prev_row[1:]
-                    for i in range(len(pixels)):
-                        pixels[i] = (pixels[i] + prev_pixels[i]) % 256
-            elif filter_byte == 3:  # Average
-                for i in range(len(pixels)):
-                    left = pixels[i-3] if i >= 3 else 0
-                    up = 0
-                    if y > 0:
-                        prev_row_start = (y-1) * bytes_per_row
-                        prev_row_end = prev_row_start + bytes_per_row
-                        prev_row = bytearray(decompressed[prev_row_start:prev_row_end])
-                        up = prev_row[1+i]
-                    pixels[i] = (pixels[i] + ((left + up) // 2)) % 256
-            elif filter_byte == 4:  # Paeth
-                for i in range(len(pixels)):
-                    left = pixels[i-3] if i >= 3 else 0
-                    up = 0
-                    up_left = 0
-                    if y > 0:
-                        prev_row_start = (y-1) * bytes_per_row
-                        prev_row_end = prev_row_start + bytes_per_row
-                        prev_row = bytearray(decompressed[prev_row_start:prev_row_end])
-                        up = prev_row[1+i]
-                        if i >= 3:
-                            up_left = prev_row[1+i-3]
-                    p = left + up - up_left
-                    pa = abs(p - left)
-                    pb = abs(p - up)
-                    pc = abs(p - up_left)
-                    if pa <= pb and pa <= pc:
-                        pred = left
-                    elif pb <= pc:
-                        pred = up
-                    else:
-                        pred = up_left
-                    pixels[i] = (pixels[i] + pred) % 256
-            img_data[y * width * 3 : (y+1) * width * 3] = pixels
-    
-    img = Image.frombytes('RGB', (width, height), bytes(img_data))
-    img.save(output_path)
+        off = y * stride
+        filter_type = raw[off]
+        if filter_type not in range(5):
+            raise ValueError(f"unsupported PNG filter {filter_type} at row {y}")
+        filter_counts[filter_type] = filter_counts.get(filter_type, 0) + 1
+
+        current = bytearray(raw[off + 1 : off + stride])
+        for i, value in enumerate(current):
+            left = current[i - bpp] if i >= bpp else 0
+            up = previous[i]
+            up_left = previous[i - bpp] if i >= bpp else 0
+
+            if filter_type == 1:  # Sub
+                current[i] = (value + left) & 0xFF
+            elif filter_type == 2:  # Up
+                current[i] = (value + up) & 0xFF
+            elif filter_type == 3:  # Average
+                current[i] = (value + ((left + up) // 2)) & 0xFF
+            elif filter_type == 4:  # Paeth
+                current[i] = (value + paeth(left, up, up_left)) & 0xFF
+            # filter_type 0 leaves the byte unchanged.
+
+        output += current
+        previous = current  # PNG predictors use the reconstructed prior row.
+
+    print(f"Decoded {height} rows; filter counts: {filter_counts}")
+    return np.frombuffer(bytes(output), dtype=np.uint8).reshape(height, width, bpp)
+
+
+def extract_full_image(data: bytes) -> np.ndarray:
+    chunks = read_chunks(data)
+    idat = b"".join(chunk_data for chunk_type, chunk_data, _ in chunks if chunk_type == b"IDAT")
+    raw = zlib.decompress(idat)
+    return unfilter_png_scanlines(raw, WIDTH, BYTES_PER_PIXEL)
+
+
+def restore_full_png(data: bytes, output_path: Path) -> Path:
+    restored = bytearray(data)
+    restored[20:24] = struct.pack(">I", 430)
+    restored[29:33] = struct.pack(
+        ">I", zlib.crc32(restored[12:16] + restored[16:29]) & 0xFFFFFFFF
+    )
+    output_path.write_bytes(restored)
     return output_path
 
-def analyze_noise(img_path):
-    img = Image.open(img_path)
-    arr = np.array(img)
-    
-    # Extract LSB from all channels
-    for c, name in enumerate(['R', 'G', 'B']):
-        lsb = (arr[:, :, c] & 1).flatten()
-        bytes_data = bytearray()
-        for i in range(0, len(lsb), 8):
-            byte_val = 0
-            for j in range(8):
-                if i + j < len(lsb):
-                    byte_val = (byte_val << 1) | lsb[i + j]
-            bytes_data.append(byte_val)
-        text = bytes_data[:50000].decode('ascii', errors='ignore')
-        for m in re.finditer(r'EVIL\{[^}]+\}', text):
-            return m.group()
-    
-    # Check corner grid (8x8 value noise vertices)
-    corners_r = arr[::8, ::8, 0]
-    corners_g = arr[::8, ::8, 1]
-    corners_b = arr[::8, ::8, 2]
-    
-    # LSB of corner values
-    for name, corners in [('R', corners_r), ('G', corners_g), ('B', corners_b)]:
-        lsb = (corners & 1).flatten()
-        bytes_data = bytearray()
-        for i in range(0, len(lsb), 8):
-            byte_val = 0
-            for j in range(8):
-                if i + j < len(lsb):
-                    byte_val = (byte_val << 1) | lsb[i + j]
-            bytes_data.append(byte_val)
-        text = bytes_data.decode('ascii', errors='ignore')
-        for m in re.finditer(r'EVIL\{[^}]+\}', text):
-            return f"{name} corner LSB: {m.group()}"
-    
-    # Check extra rows (hidden 80 rows) specifically
-    if arr.shape[0] > 350:
-        extra_rows = arr[350:, :, :]
-        for c, name in enumerate(['R', 'G', 'B']):
-            lsb = (extra_rows[:, :, c] & 1).flatten()
-            bytes_data = bytearray()
-            for i in range(0, len(lsb), 8):
-                byte_val = 0
-                for j in range(8):
-                    if i + j < len(lsb):
-                        byte_val = (byte_val << 1) | lsb[i + j]
-                bytes_data.append(byte_val)
-            text = bytes_data.decode('ascii', errors='ignore')
-            for m in re.finditer(r'EVIL\{[^}]+\}', text):
-                return f"Extra rows {name} LSB: {m.group()}"
-    
-    return ("Flag not found in LSB or corner LSB. Noise is 8x8 value noise "
-            "(corner grid). Seed may be derived from image properties "
-            "(625x350/430, IHDR CRC=0x65fdde11/0x706fc708). "
-            "Flag possibly embedded in noise parameters or seed.")
 
-def solve():
-    # Repair PNG
-    repaired = repair_png('ruido.png', 'ruido_repaired.png')
-    print(f"Repaired PNG saved to {repaired}")
-    
-    # Extract full image (430x625)
-    full_img = extract_full_image('ruido.png', 'full_image.png')
-    print(f"Full image (430x625) saved to {full_img}")
-    
-    # Analyze
-    flag = analyze_noise(full_img)
-    return flag
+def pack_bits(bits: np.ndarray, bitorder: str) -> bytes:
+    usable = bits[: (bits.size // 8) * 8].astype(np.uint8)
+    return np.packbits(usable, bitorder=bitorder).tobytes()
 
-if __name__ == '__main__':
-    result = solve()
-    print(result)
+
+def search_blob(label: str, blob: bytes) -> str | None:
+    match = BINARY_FLAG.search(blob)
+    if match:
+        return f"{label}: {match.group().decode()}"
+    return None
+
+
+def scan_direct_bitplanes(image: np.ndarray) -> str | None:
+    regions = {
+        "all": image,
+        "visible": image[:VISIBLE_HEIGHT],
+        "hidden": image[VISIBLE_HEIGHT:],
+    }
+
+    for region_name, region in regions.items():
+        streams = {
+            "R": region[:, :, 0],
+            "G": region[:, :, 1],
+            "B": region[:, :, 2],
+            "RGB": region.reshape(region.shape[0], -1),
+            "BGR": region[:, :, ::-1].reshape(region.shape[0], -1),
+        }
+        for stream_name, stream in streams.items():
+            flat = stream.ravel()
+            for plane in range(8):
+                bits = (flat >> plane) & 1
+                for bitorder in ("big", "little"):
+                    blob = pack_bits(bits, bitorder)
+                    result = search_blob(
+                        f"{region_name} {stream_name} bit{plane} {bitorder}", blob
+                    )
+                    if result:
+                        return result
+    return None
+
+
+def scan_common_multiplane_orders(image: np.ndarray) -> str | None:
+    regions = {"all": image, "hidden": image[VISIBLE_HEIGHT:]}
+    channel_orders = {"RGB": (0, 1, 2), "BGR": (2, 1, 0), "R": (0,), "G": (1,), "B": (2,)}
+    plane_orders = {
+        "lsb012": (0, 1, 2),
+        "msb765": (7, 6, 5),
+        "byte_lsb": tuple(range(8)),
+        "byte_msb": tuple(reversed(range(8))),
+    }
+
+    for region_name, region in regions.items():
+        for channel_name, channels in channel_orders.items():
+            for plane_name, planes in plane_orders.items():
+                bits: list[int] = []
+                for row in region:
+                    for pixel in row:
+                        for channel in channels:
+                            value = int(pixel[channel])
+                            bits.extend((value >> plane) & 1 for plane in planes)
+                bit_array = np.array(bits, dtype=np.uint8)
+                for bitorder in ("big", "little"):
+                    blob = pack_bits(bit_array, bitorder)
+                    result = search_blob(
+                        f"{region_name} {channel_name} {plane_name} {bitorder}", blob
+                    )
+                    if result:
+                        return result
+    return None
+
+
+def solve() -> str:
+    data = INPUT.read_bytes()
+    original_height = struct.unpack(">I", data[20:24])[0]
+    stored_crc = struct.unpack(">I", data[29:33])[0]
+
+    restored_ihdr = bytearray(data[16:29])
+    restored_ihdr[4:8] = struct.pack(">I", 430)
+    restored_crc = zlib.crc32(b"IHDR" + restored_ihdr) & 0xFFFFFFFF
+    print(f"IHDR height in file: {original_height}")
+    print(f"Stored IHDR CRC: 0x{stored_crc:08x}; CRC if height=430: 0x{restored_crc:08x}")
+
+    image = extract_full_image(data)
+    Image.fromarray(image).save(Path(__file__).with_name("full_image.png"))
+    restore_full_png(data, Path(__file__).with_name("ruido_fixed.png"))
+
+    hidden = image[VISIBLE_HEIGHT:]
+    print(f"Hidden rows: {hidden.shape[0]}; means={hidden.mean(axis=(0, 1))}; std={hidden.std(axis=(0, 1))}")
+
+    for scanner in (scan_direct_bitplanes, scan_common_multiplane_orders):
+        result = scanner(image)
+        if result:
+            return result
+
+    return (
+        "UNSOLVED: restored 430-row PNG and scanned direct/common bitplane orders; "
+        "no flag-shaped token found. Continue with procedural-noise/seed analysis."
+    )
+
+
+if __name__ == "__main__":
+    print(solve())
